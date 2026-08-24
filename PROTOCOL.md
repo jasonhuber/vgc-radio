@@ -248,6 +248,22 @@ displays it as `index + 1` to match the radio's own screen (see `PLAN.md`).
   10 bytes`. Unlike `SET_REGION`, this one replies normally with a
   `reply_status:u8`.
 
+## Scanning — no start/stop command is known
+
+Nothing in benlink or HTCommander starts or stops a scan. What exists is:
+
+- `RfCh.scan` (1 bit per channel) — whether a channel is *included* in a sweep.
+  Writable, and this app writes it.
+- `Status.is_scan` — read-only telemetry saying a sweep is running.
+- `EVENT.HT_CH_CHANGED` — pushes the new `RfCh` each time the radio lands on a
+  different channel, which is how you follow a scan in progress.
+
+So a controller can observe a scan completely and start one not at all. The
+scan button is on the radio. An app-driven sweep would need a way to set the
+*current* channel; the untested candidates are `WRITE_REGION_CH` (58, undecoded)
+and `channel_a`/`channel_b` in `Settings` (10/11, decoded in benlink, not
+implemented here).
+
 ## Audio — not reachable from a browser
 
 benlink has an audio link, but it runs over **RFCOMM (Bluetooth Classic)**.

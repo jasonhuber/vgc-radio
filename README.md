@@ -15,7 +15,8 @@ Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 |---|---|
 | [`PLAN.md`](PLAN.md) | **Start here.** State, open questions, roadmap |
 | [`PROTOCOL.md`](PROTOCOL.md) | Wire protocol reference — framing, all bitfields |
-| [`vgc-programmer.html`](vgc-programmer.html) | **The entire application.** Source of truth |
+| [`vgc-programmer.html`](vgc-programmer.html) | **The entire front end.** Source of truth |
+| [`radio-api/`](radio-api) | PHP + SQLite API: accounts, coverage sync, AI list review |
 | [`build-library.mjs`](build-library.mjs) | Master CSV → embedded channel library + site geocoding |
 | [`test-codec.mjs`](test-codec.mjs) | 57 offline protocol assertions |
 | [`deploy-n7wgp.sh`](deploy-n7wgp.sh) | Publish to n7wgp.com |
@@ -36,10 +37,29 @@ Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 | Built-in 125-channel library, 5 categories | built |
 | CHIRP CSV import/export | built |
 | Live status: TX/RX/SQ/scan/GPS, RSSI, battery, current group | built, unverified |
+| **Coverage log** — logs every squelch-open with channel, RSSI and GPS position; CSV/GeoJSON export, plots on the map | built, unverified |
+| On-page instructions, incl. a full APRS/BSS/TNC/KISS walkthrough | built |
 | Event push — reacts when you turn the knob | built, unverified |
 | APRS/BSS settings (callsign, beacon, share interval) | built, unverified on hardware |
 | Packet terminal (send), radio settings page | **not built** — see PLAN.md |
+| Starting/stopping the radio's scan from the app | **not decoded** — no such command is known |
+| Accounts (invite only), coverage stored per account, cross-device sync | built |
+| "Check this list" — AI review of an imported channel list | built |
 | Audio / Bluetooth PTT | **impossible in a browser** — BLE cannot do Classic audio |
+
+## Accounts
+
+The site is **invite only**. Mint codes with the admin token from
+`radio-api/config.php`:
+
+```bash
+curl -s -X POST https://n7wgp.com/api/admin/invite \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"count":3,"note":"who they are for"}'
+```
+
+Signing in once makes a device work **offline** from then on — only an explicit
+401 from the server ends a session, so no signal never means no access.
 
 ## Requirements
 
@@ -71,8 +91,15 @@ node test-codec.mjs                 # 57 assertions, run before every deploy
 node build-library.mjs              # summary + sanity checks, writes nothing
 node build-library.mjs --write      # regenerate the embedded library from the CSV
 ./deploy-n7wgp.sh                   # dry run
-./deploy-n7wgp.sh --apply           # publish
+./deploy-n7wgp.sh --apply           # publish the page
+cd radio-api && ./deploy.sh         # dry run
+cd radio-api && ./deploy.sh --apply # publish the API
 ```
+
+The API deploy never syncs `radio-data/` or any `.db` — the database lives only
+on the server. It refuses to run if `config.php` still holds a placeholder
+secret, and after deploying it checks that `config.php` and the SQLite file
+answer 403.
 
 `vgc-programmer.html` is the only file to edit. `public/index.html` is built
 from it at deploy time so the published copy cannot drift, and `test-codec.mjs`

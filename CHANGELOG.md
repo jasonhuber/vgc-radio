@@ -1,5 +1,143 @@
 # Changelog
 
+## 2026-08-24 (cleanup) — GMRS defect fixed, admin user routes, DeepSeek traced
+
+- **Fixed the GMRS bandwidth defect the review feature found**, in the master
+  CSV, then regenerated the library. All 14 interstitial channels shipped as
+  **wide**, and they must be 12.5 kHz narrow:
+  - ch 1–7 (462.5625–462.7125) → narrow, 5 W
+  - ch 8–14 (467.5625–467.7125) → narrow, **0.5 W** (these were also at 8 W)
+  - ch 15–22 (462.5500–462.7250) were already right: wide and high power are
+    both permitted on the main channels.
+  Note the model was only **partly** right: it wanted low power on ch 1–7 too,
+  but 5 W is permitted there — it had applied the FRS limit. Bandwidth was the
+  real bug on all 14. A good argument for findings staying advisory.
+- **Added `GET`/`DELETE /api/admin/users`** so an account and everything it
+  owns can be removed. Deleting frees the invite code for reuse. Used it to
+  remove the `deploy-check@n7wgp.test` verification account — the database now
+  holds no users, and all four invite codes are unused.
+- **Traced why DeepSeek is not answering.** The worker source is
+  `Sustav Dev/Pogodi/ios/cloudflare-worker` (routed to `api.sustav.dev`).
+  DeepSeek is **already fully implemented** there — `Provider` includes it,
+  `DEEPSEEK_MODEL = "deepseek-v4-flash"`, and it routes to DeepSeek's
+  Anthropic-compatible surface. `availableProviders()` includes a provider only
+  when its API key is set, so the only thing missing is the secret:
+  `npx wrangler secret put DEEPSEEK_API_KEY` in that worker directory. Nothing
+  in this project changes when that lands — it already asks for `deepseek`, and
+  the worker orders providers cheapest-first.
+
+## 2026-08-24 (backend) — accounts, coverage sync, AI list review
+
+- **Built `radio-api/`** — a single-file PHP router on SQLite, same shape as
+  `jasonhuber.com/track-api`, deployed to `n7wgp.com/public_html/api`.
+  Registration is **invite only**: there is no open signup route at all,
+  because every account can spend model tokens through the prompt proxy.
+  Codes are minted with an admin Bearer token from curl.
+- **Auth.** `password_hash`/`password_verify`; session tokens are 32 random
+  bytes, stored **hashed with a pepper** so a database copy is not a set of
+  live logins. Login always runs a verify even for an unknown email so timing
+  does not reveal which addresses have accounts, and both failure paths return
+  the same message. Rate limited per IP. 180-day sessions, deliberately long.
+- **Offline is a first-class case.** The token and user are cached; a failed
+  `/auth/me` on boot means *offline*, never *signed out*; only an explicit 401
+  clears the session. The app renders from cache before any network round trip,
+  so there is never a login wall between a parked operator and their channel
+  list.
+- **Coverage sync.** Push/pull of sessions, rows and track, merged rather than
+  replaced so two devices can both contribute. Re-pushing is idempotent — rows
+  key on `sid|t|g|ch|kind`. A finished session uploads itself. Verified live by
+  wiping the browser copy and pulling it all back.
+- **"Check this list"** on the Channel library — sends the filtered list to the
+  Sustav proxy and returns findings (bad offsets, tones on simplex, wide
+  bandwidth where narrow is required, out-of-band frequencies, names that
+  truncate at 10 characters, duplicates), rendered by severity. Findings are
+  advisory and never touch the library.
+- **Two corrections found by testing, both worth recording:**
+  - The proxy is at **`https://api.sustav.dev/v1/prompt`** (a Cloudflare
+    Worker). The bare `sustav.dev/v1/prompt` that appears in some Swift
+    comments is the static marketing site and 404s.
+  - The worker's `/health` reports `configuredProviders: ["openai","anthropic"]`.
+    It does **not** reject an unknown provider — it silently falls back and
+    reports what actually answered in a `source` field. So asking for DeepSeek
+    today returns OpenAI. Rather than hide that, the API passes `source`
+    through and the UI prints "answered by openai, not deepseek". **To make
+    DeepSeek real, add it to the worker's configured providers.**
+- Per-user isolation, 401s on every protected route, and the 403s on
+  `config.php` and the SQLite file are all verified against the live host.
+
+## 2026-08-24 (later still) — coverage sessions, a bubble map, map gets its own tab
+
+- **The repeater map is now its own page.** It was tucked at the bottom of
+  Channels; it is a site picker and deserved its own tab. Removed the coverage
+  overlay from it — coverage has its own map now (below), which is what it
+  should have had from the start.
+- **Coverage runs are now sessions.** One drive, one hilltop, one evening.
+  Pick an old session from the dropdown and the map, the totals and both
+  tables all switch to that run. Sessions can be renamed and deleted
+  individually.
+  - **They end themselves**, because people forget — especially the person who
+    parked and walked into a building. Nothing heard for N minutes (10 by
+    default, editable next to the start button) closes the session. The status
+    strip counts down to it. A session that recorded nothing is discarded
+    rather than cluttering the picker.
+  - Storage moved to `n7wgp.vrn76.coverage.v2` — `{sessions, rows, track}`.
+    The old flat v1 log migrates into a single session on first load, so
+    nothing already recorded is lost.
+- **GPS breadcrumb track.** Every ~25 m of movement (or every minute standing
+  still) a point is recorded, per session. This is the half that was missing:
+  the track shows where you drove and heard **nothing**, which is what turns a
+  pile of hits into an actual coverage map. Total miles travelled is now in the
+  session stats.
+- **Built the bubble map** — its own SVG, not the repeater map. It fits itself
+  to the selected session rather than to the QTH, so a run four hours down the
+  road frames correctly. Every reception is a bubble where it was heard from,
+  **sized and coloured by signal strength**; the track draws underneath;
+  repeater sites show as faint rings for context (toggleable) and never expand
+  the bounds. Scale bar, legend, and hover detail on every bubble.
+  - Site labels use greedy collision placement and reserve the bubbles too, so
+    a label never lands on data. First attempt placed zero labels — every
+    candidate box overlapped its own site's ring reservation. Offsets now clear
+    the ring.
+- GeoJSON export gained the track as a `LineString` per session alongside the
+  reception points; CSV gained session id and label. Both export whatever the
+  session dropdown is showing.
+
+## 2026-08-24 (late night) — coverage log, pages instead of one long scroll
+
+- **Built the coverage log** — a passive receive logger. It records a row every
+  time the radio's squelch opens: group, channel, name and frequency, peak and
+  average RSSI, duration, and the phone's GPS position at that moment. Summary
+  by channel, full reception list, CSV and GeoJSON export, and the points plot
+  onto the existing repeater map coloured by signal strength. Incoming packets
+  (`DATA_RXD`) become rows too, with their text and position.
+  - **It does not command the radio.** There is no decoded scan start/stop —
+    the user presses scan on the radio and this listens. The only lever this
+    app has over scanning is the per-channel `scan` flag in `RfCh`, which it
+    already writes. An app-driven sweep needs a way to set the current channel
+    (`WRITE_REGION_CH` (58), or `channel_a`/`channel_b` in `Settings`) and
+    neither is implemented — see `PLAN.md`.
+  - Sources both the pushed `HT_STATUS_CHANGED` events and the status poll,
+    which now runs at 1.2s instead of 4s while logging. Squelch flutter under
+    0.4s with no RSSI sample is discarded.
+  - Asks for a screen wake lock; warns that a backgrounded mobile browser
+    suspends BLE and throttles GPS. Capped at 3000 rows in localStorage.
+  - **The whole feature rests on `StatusExt` actually arriving**, which had
+    never been seen on real hardware — so running it is also the hardware test
+    the live status strip has been waiting for.
+- **Reorganised the UI into pages** (Start here · Radio link · Channels &
+  groups · Coverage log · APRS & packet · Instructions · Protocol log). The
+  landing page is now a set of cards describing what you can actually do,
+  led by "load my area's repeaters onto the radio". The repeater map moved to
+  the bottom of the Channels page — it was the loudest thing on screen and is
+  a site picker, not the point. Connect/Disconnect moved into the header so it
+  is reachable from every page. Deep links work (`#coverage`, `#guide`).
+- **Wrote the on-page instructions** the UI kept deferring to: what you need,
+  connecting, programming, groups vs slots, running the coverage log and every
+  way it can mislead you, and a full plain-language APRS / BSS / TNC / KISS
+  walkthrough — including that the TNC needs no separate connection, what
+  receive already does, that transmit isn't built, and which two settings still
+  have to be set from the radio's own menu.
+
 ## 2026-08-24 (night) — group rename, and SET_REGION probably never worked right
 
 - **Added group (region) rename**, sourced from

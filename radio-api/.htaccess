@@ -1,0 +1,33 @@
+# N7WGP radio API — Apache config (lives in public_html/api/).
+# Routes /api and /api/* through index.php.
+
+Options -Indexes
+ServerSignature Off
+
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pass the Authorization header to PHP. Apache strips it by default on
+    # many shared hosts (Hostinger included), which breaks Bearer auth.
+    RewriteCond %{HTTP:Authorization} .+
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Block direct access to the database and config.
+    RewriteRule ^radio-data($|/) - [F,L]
+    RewriteRule ^config\.php$ - [F,L]
+
+    # Route everything under this folder to index.php (this folder is /api).
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^.*$ index.php [L,QSA]
+</IfModule>
+
+# Hard deny config + the SQLite db via direct file requests, even if
+# mod_rewrite is off.
+<FilesMatch "^config\.php$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "\.(db|sqlite|sqlite3)$">
+    Require all denied
+</FilesMatch>

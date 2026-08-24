@@ -22,6 +22,118 @@ Live at **<https://n7wgp.com>**. Source of truth is `vgc-programmer.html`
 | `SET_REGION` group switching | index still unverified, but a real bug that broke every attempt is now fixed — see below |
 | APRS/BSS settings page (`BssSettings`, 46/50-byte codec) | built, 4 offline round-trip assertions, **not yet run against real hardware** |
 | Group (region) rename (`READ`/`WRITE_REGION_NAME`) | **built 2026-08-24**, sourced from HTCommander's hardware-confirmed decode, **not yet round-tripped by this app** |
+| Coverage log (sessions, GPS track, bubble map) | **built 2026-08-24**, **never run against a radio** — see below |
+| Accounts (invite only), coverage sync, AI list review | **built and live 2026-08-24** — `radio-api/`, verified end to end |
+| UI split into pages, on-page instructions | **built 2026-08-24** |
+
+### The coverage log, and what it is really testing
+
+Built 2026-08-24. It is **passive**: it commands the radio not at all. It
+listens to `HT_STATUS_CHANGED` pushes plus the status poll (1.2s while
+logging, 4s otherwise), opens a row when `is_sq || is_in_rx` goes true, closes
+it when squelch shuts or the channel changes underneath it, and tags the row
+with `watchPosition()`'s latest fix. `DATA_RXD` packets get their own rows.
+Export is CSV and GeoJSON; points overlay the repeater map.
+
+**Every field it records comes from `StatusExt` — which this project has never
+seen arrive.** RSSI, `curr_region` and the upper channel bits are all in the
+extended half. So the first real-hardware run of the coverage log is
+simultaneously:
+
+1. the hardware test the live status strip has been waiting for,
+2. evidence about whether `curr_region` is real (see the `SET_REGION` question
+   below — watching this number while changing groups on the radio's own keypad
+   is listed there as the cheapest way to settle it), and
+3. the coverage log's own shakedown.
+
+Run it before assuming any of it works. If the group column reads 1 everywhere
+and RSSI is blank, the radio is sending the short `Status` and only the
+timestamp/channel/position half of each row is trustworthy.
+
+**Why it cannot start the scan.** No scan start/stop command has been decoded
+for this protocol — not in benlink, not in HTCommander. `RfCh.scan` (which this
+app already writes) only decides whether a channel is *included* in a sweep the
+user starts from the keypad; `Status.is_scan` is read-only telemetry. An
+app-driven sweep — step channel, dwell, sample RSSI, repeat — needs a way to
+set the *current* channel, and there are two candidates, neither implemented:
+
+- `WRITE_REGION_CH` (58), undecoded; the name is suggestive and nothing more.
+- `channel_a` / `channel_b` in `Settings` (roadmap item 3, decoded in benlink).
+
+Before building that, consider that a sweep hammers the radio's settings store
+hundreds of times an hour. Worth understanding the wear implications, and worth
+gating behind an explicit opt-in.
+
+### The backend turn — decided 2026-08-24, not yet built
+
+Direction from the owner, overriding the earlier "no login" recommendation:
+**login is required to use any feature**, the coverage log is stored
+server-side per account, and the AI work is a **checking** pass over a list the
+user imports rather than generation from scratch ("most people will want to
+pull in their own list and then check it"). That reframing is a better product
+than the original generate-a-list idea — it puts a human's own data in front
+and uses the model where it is actually reliable.
+
+**The AI proxy convention is already established** in the Sustav iOS apps
+(`Briga`, `Izraz`, `Pokret`, `Govoriti`, `Pogodi` — see each app's
+`Services/AIService.swift`):
+
+```
+POST https://sustav.dev/v1/prompt
+{ "systemPrompt": "...", "userPrompt": "...", "preferredProvider": "automatic" }
+-> { "text": "..." }
+```
+
+The Swift `LLMProvider` enum is `proxy | openai | anthropic`, and Izraz sends
+the string `"automatic"`. **No Chinese-model identifier appears anywhere in the
+client code** — provider routing lives on the server, and the sustav.dev copy
+in this workspace is only the static marketing site, so the server source is
+not here. The one thing still needed before this can be written is the exact
+`preferredProvider` string the proxy expects for the intended model.
+
+**Built and deployed 2026-08-24.** `radio-api/` — PHP + SQLite, invite only,
+live at `https://n7wgp.com/api`. See `CHANGELOG.md` for the security
+properties and what was verified against the live host.
+
+**The DeepSeek routing is not real yet, and the UI says so.** Two corrections
+came out of testing:
+
+- The proxy is **`https://api.sustav.dev/v1/prompt`** (Cloudflare Worker). The
+  bare `sustav.dev/v1/prompt` in some Swift comments is the static marketing
+  site and 404s.
+- The worker's `/health` reports `configuredProviders: ["openai","anthropic"]`
+  and does **not** reject an unknown provider — it silently falls back and
+  names what actually answered in a `source` field. Asking for `deepseek`
+  today returns OpenAI. The API forwards `source` and the review panel prints
+  "answered by openai, not deepseek" rather than pretending.
+  **Next step: add DeepSeek to the worker's configured providers.** No change
+  is needed here when that happens — `RADIO_PROXY_PROVIDER` is already
+  `deepseek`.
+
+**The one remaining step is a secret, and it is not this project's to set.**
+The worker behind `api.sustav.dev` is
+`Sustav Dev/Pogodi/ios/cloudflare-worker`, and DeepSeek is already implemented
+in it. `availableProviders()` lists a provider only when its API key exists, so:
+
+```bash
+cd "~/Library/CloudStorage/Dropbox/Personal/Sustav Dev/Pogodi/ios/cloudflare-worker"
+npx wrangler secret put DEEPSEEK_API_KEY
+```
+
+After that `/health` should list `deepseek` first and the review panel will say
+"answered by deepseek". No change is needed here.
+
+Still open:
+
+1. **Offline.** "Login for everything" and "works in the field with no signal"
+   are in direct conflict. The fix is standard and must be built in from the
+   start: authenticate once, cache the session token, and let every local
+   feature keep working offline against it — never a login wall between a
+   parked operator and their channel list.
+4. **Coverage privacy.** A coverage log is a timestamped record of where
+   someone drove. Storing it server-side makes the current footer claim
+   ("nothing is uploaded, no data leaves this page") false, so that copy has to
+   change honestly, and per-user isolation has to be real rather than assumed.
 
 ### The one thing blocking everything else
 
@@ -140,7 +252,42 @@ power, time offset, imperial units.
 Worth gating the dangerous ones behind a confirm — `ch_data_lock` and
 `ptt_lock` can make the radio confusing until you find them again.
 
-### 4. Smaller wins
+### 4. Check my imported list — the AI feature, as redefined 2026-08-24
+
+**Superseded the "generate a list from a pin" idea.** The user imports their own
+CHIRP CSV — which they already can — and the model *checks* it: flags tones
+that look wrong for the band, offsets that do not match the standard plan,
+duplicate or out-of-band frequencies, names that will truncate at 10
+characters, and entries that look stale. Findings land as proposed edits in the
+existing diff UI, never written to a radio unreviewed.
+
+This is the better shape: it uses the model where it is reliable (spotting
+inconsistency in data a human supplied) instead of where it is not (recalling
+specific repeater frequencies from memory). It also needs no repeater database
+and no licensing question.
+
+The original idea, kept for reference: **drop a pin, get a list built for that
+place** — repeaters in range, sorted by distance, with tones.
+
+Open questions before this is a plan, not a wish:
+
+- **Where does the data come from?** RepeaterBook has an API and clear terms;
+  the current 80-site list was scraped from it in 2021 and is stale. Any
+  answer has to respect the source's licence, and the page is currently
+  dependency-free and makes zero network calls — a lookup breaks both
+  properties, so it must be an explicit, optional, clearly-labelled action,
+  never something the page does on load.
+- **Where does the work happen?** A model call needs a backend and a key; the
+  page has neither, by design. A precomputed regional bundle the page fetches
+  on demand keeps the offline-first property and is much cheaper.
+- **How is a bad suggestion caught?** A wrong tone or offset is a channel that
+  silently doesn't work in the field. Anything generated must land in the
+  library as *proposed*, diffable and editable, before it can be written to a
+  radio.
+
+The card for this is already on the Start page, marked "not built yet".
+
+### 5. Smaller wins
 
 - **GPS position** — `SET_POSITION` (32); controller exposes `position()`.
 - **PF keys** — `GET_PF` (55) / `SET_PF` (56), decoded in `pf.py`.
@@ -156,6 +303,10 @@ Worth gating the dangerous ones behind a confirm — `ch_data_lock` and
   decoded when that panel was built; it now can be added to it directly.
 - Import the AZ frequency coordinator's 70cm PDF to refresh tones; the
   RepeaterBook data behind the current list was last updated 2021.
+- **Coverage log follow-ons**, once it has run on hardware: a "heard here /
+  not heard here" view that pairs receptions against silence, an import so an
+  older log can be reloaded after clearing site data, and IndexedDB instead of
+  localStorage if 3000 rows turns out to be the binding limit.
 
 ### Not decoded — reverse engineering required
 

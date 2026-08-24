@@ -28,11 +28,89 @@ header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
 header h1{font-size:15px;margin:0;font-weight:650}
 header .call{font:700 13px/1 var(--mono);color:var(--accent);letter-spacing:.04em}
 header .sub{font:400 12px/1 var(--mono);color:var(--muted)}
-#status{margin-left:auto;font:600 12px/1 var(--mono);padding:5px 10px;border-radius:999px;
+#who{margin-left:auto}
+#status{font:600 12px/1 var(--mono);padding:5px 10px;border-radius:999px;
   border:1px solid var(--line);color:var(--muted)}
 #status.on{color:var(--ok);border-color:var(--ok)}
 #status.err{color:var(--err);border-color:var(--err)}
+#nav{display:flex;gap:3px;flex-wrap:wrap;padding:7px 14px;background:var(--panel);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+#nav button{border:1px solid transparent;background:transparent;color:var(--muted);
+  padding:7px 12px;border-radius:7px;font-size:13px;font-weight:600}
+#nav button:hover:not(.on){color:var(--accent);border-color:transparent}
+#nav button.on{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);
+  border-color:color-mix(in srgb,var(--accent) 34%,transparent)}
 main{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:var(--bg);
+  display:flex;flex-direction:column;gap:8px}
+.card h3{margin:0;font-size:14px;font-weight:650}
+.card p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6;flex:1}
+.card .go{align-self:flex-start}
+.card.soon{border-style:dashed;opacity:.8}
+.card .step{font:11px/1.5 var(--mono);color:var(--muted);margin:0;padding-left:16px}
+.doc{max-width:78ch;line-height:1.72;font-size:13.5px}
+.doc h3{margin:26px 0 6px;font-size:14.5px;font-weight:650}
+.doc h3:first-child{margin-top:0}
+.doc h4{margin:18px 0 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.doc p{margin:8px 0}
+.doc ol,.doc ul{padding-left:21px;margin:8px 0}
+.doc li{margin:5px 0}
+.doc code{font:12px var(--mono);background:var(--sunk);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px}
+.doc .callout{border-left:3px solid var(--warn);padding:2px 0 2px 12px;margin:12px 0;color:var(--muted)}
+.doc .callout b{color:var(--ink)}
+.doc table{white-space:normal;font-size:12.5px;font-family:inherit;margin:10px 0}
+.doc table th,.doc table td{vertical-align:top}
+#cov{display:flex;gap:11px;flex-wrap:wrap;align-items:center;padding:9px 11px;
+  border:1px solid var(--line);border-radius:8px;background:var(--sunk);font:11px var(--mono)}
+#cov .val{color:var(--ink);font-weight:650}
+#cov .dotlive{width:9px;height:9px;border-radius:50%;background:var(--err);flex:none;
+  animation:covpulse 1.6s ease-in-out infinite}
+@keyframes covpulse{50%{opacity:.2}}
+#covmapWrap{border:1px solid var(--line);border-radius:8px;background:var(--sunk);overflow:hidden}
+#covmap{display:block;width:100%;height:auto}
+#covmap .trk{fill:none;stroke:var(--accent);stroke-width:1.6;opacity:.45}
+#covmap .trkpt{fill:var(--muted);opacity:.5}
+#covmap .bub{stroke:var(--panel);stroke-width:1;cursor:pointer}
+#covmap .bub:hover{stroke:var(--ink);stroke-width:2}
+#covmap .csite circle{fill:none;stroke:var(--muted);stroke-width:1.3;opacity:.65}
+#covmap .clab{fill:var(--muted);font:600 10px var(--mono);pointer-events:none;
+  paint-order:stroke;stroke:var(--sunk);stroke-width:3px;stroke-linejoin:round}
+#covmap .me{fill:var(--err)}
+#covmap .sb{stroke:var(--ink);stroke-width:1.6}
+#covmap .sblab{fill:var(--muted);font:600 10px var(--mono)}
+#covmap .hint{fill:var(--muted);font:13px system-ui,sans-serif}
+.legend{display:flex;gap:13px;flex-wrap:wrap;align-items:center;font:11px var(--mono);
+  color:var(--muted);margin-top:9px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
+  vertical-align:-1px}
+#auth{max-width:440px;margin:48px auto;padding:22px 24px;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px}
+#auth h2{margin:0 0 4px;font-size:17px}
+#auth .lead{margin:0 0 18px;font-size:13px;color:var(--muted);line-height:1.6}
+#auth .f{margin-bottom:11px}
+#auth input{width:100%}
+#auth .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+#auth .tabs button{border:none;background:none;color:var(--muted);padding:8px 12px;
+  border-bottom:2px solid transparent;border-radius:0;font-size:13px}
+#auth .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+#authMsg{margin-top:12px;font-size:12.5px;line-height:1.6}
+#authMsg.err{color:var(--err)} #authMsg.ok{color:var(--ok)}
+#who{font:11px var(--mono);color:var(--muted)}
+#who b{color:var(--ink)}
+#syncState{font:11px var(--mono);color:var(--muted)}
+.find{border-left:3px solid var(--line);padding:7px 0 7px 11px;margin:9px 0;font-size:13px;
+  line-height:1.55}
+.find.error{border-left-color:var(--err)}
+.find.warning{border-left-color:var(--warn)}
+.find.note{border-left-color:var(--info)}
+.find .sev{font:600 10px var(--mono);text-transform:uppercase;letter-spacing:.06em;
+  margin-right:7px}
+.find.error .sev{color:var(--err)} .find.warning .sev{color:var(--warn)}
+.find.note .sev{color:var(--info)}
+.find .ch{font:600 12px var(--mono);color:var(--ink)}
+.find .sug{font:12px var(--mono);color:var(--ok)}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
 .panel h2{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -132,8 +210,22 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   <h1>VR-N76 Programmer</h1>
   <span class="call">N7WGP</span>
   <span class="sub">DM43bg · Chandler, AZ</span>
+  <span id="who"></span>
+  <button id="hdrConnect" class="primary">Connect radio</button>
+  <button id="btnSignOut" class="hidden">Sign out</button>
   <span id="status">disconnected</span>
 </header>
+
+<nav id="nav" class="hidden">
+  <button data-go="start">Start here</button>
+  <button data-go="radio">Radio link</button>
+  <button data-go="channels">Channels &amp; groups</button>
+  <button data-go="map">Map</button>
+  <button data-go="coverage">Coverage log</button>
+  <button data-go="packet">APRS &amp; packet</button>
+  <button data-go="guide">Instructions</button>
+  <button data-go="log">Protocol log</button>
+</nav>
 
 <div id="gate" class="hidden">
   <h2>Web Bluetooth unavailable</h2>
@@ -145,9 +237,120 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   library, groups, and CSV export are all local.</p>
 </div>
 
+<div id="auth" class="hidden">
+  <h2>N7WGP radio programmer</h2>
+  <p class="lead">This one is <b>invite only</b> — accounts are handed out rather than
+  self-served. Sign in, or redeem a code if you were given one.</p>
+
+  <div class="tabs">
+    <button id="tabLogin" class="on">Sign in</button>
+    <button id="tabRedeem">Redeem an invite</button>
+  </div>
+
+  <div id="paneLogin">
+    <div class="f"><label>Email</label><input id="a_email" type="email" autocomplete="username"></div>
+    <div class="f"><label>Password</label>
+      <input id="a_pass" type="password" autocomplete="current-password"></div>
+    <button id="btnLogin" class="primary" style="width:100%">Sign in</button>
+  </div>
+
+  <div id="paneRedeem" class="hidden">
+    <div class="f"><label>Invite code</label>
+      <input id="a_invite" placeholder="ABCD-EFGH-JKLM" style="text-transform:uppercase"></div>
+    <div class="f"><label>Email</label><input id="a_email2" type="email" autocomplete="username"></div>
+    <div class="f"><label>Callsign (optional)</label>
+      <input id="a_call" maxlength="12" style="text-transform:uppercase"></div>
+    <div class="f"><label>Password — 10 characters or more</label>
+      <input id="a_pass2" type="password" autocomplete="new-password"></div>
+    <button id="btnRedeem" class="primary" style="width:100%">Create my account</button>
+  </div>
+
+  <div id="authMsg"></div>
+  <p class="lead" style="margin:18px 0 0;font-size:12px">Your coverage logs are stored against your
+  account so they follow you between devices. Once you have signed in on a device it keeps working
+  <b>offline</b> — the field is exactly where there is no signal.</p>
+</div>
+
 <main id="app" class="hidden">
 
-  <div class="panel">
+  <div class="panel" id="pStart">
+    <h2>Start here</h2>
+    <p class="note" style="margin:0 0 12px">Everything on this page runs inside your browser and
+    talks straight to the radio over Bluetooth. Nothing is uploaded, there is no account, and it
+    keeps working with no signal — which is the point, since most of it is used in the field.
+    Pick what you came to do.</p>
+    <div class="cards">
+
+      <div class="card">
+        <h3>Load my area's repeaters onto the radio</h3>
+        <p>The usual job. Pick the channels you want from the built-in Phoenix-area library,
+        arrange them into the radio's groups and slots, then write them across.</p>
+        <ol class="step">
+          <li>Connect the radio</li>
+          <li>Filter the library — by category, or click a site on the map</li>
+          <li>Fill a group and write it</li>
+        </ol>
+        <button class="go primary" data-go="channels">Channels &amp; groups</button>
+      </div>
+
+      <div class="card">
+        <h3>Connect the radio</h3>
+        <p>Pairing is fussy exactly once: the radio drops any Bluetooth link that isn't bonded, so
+        the system pairing prompt has to be accepted. Full instructions and every error the link
+        can throw are on the Radio link page.</p>
+        <button class="go" data-go="radio">Radio link</button>
+      </div>
+
+      <div class="card">
+        <h3>Map where I can actually hear</h3>
+        <p>Turn on the coverage log, put the phone in a mount, and drive. Every time the squelch
+        opens it records the channel, the signal strength and where you were standing — then
+        exports as CSV or GeoJSON and plots on the map.</p>
+        <button class="go" data-go="coverage">Coverage log</button>
+      </div>
+
+      <div class="card">
+        <h3>See the repeaters around me</h3>
+        <p>Every site in the library plotted by distance and bearing from the QTH, with range rings.
+        Click one to filter the channel list to just that site.</p>
+        <button class="go" data-go="map">Map</button>
+      </div>
+
+      <div class="card">
+        <h3>Set up APRS or packet</h3>
+        <p>Callsign, SSID, symbol, beacon text and the PTT-release options, written straight to the
+        radio. Incoming packets already show up in the protocol log. What TNC and KISS actually
+        mean, and what still has to be set from the radio's own menu, is spelled out there.</p>
+        <button class="go" data-go="packet">APRS &amp; packet</button>
+      </div>
+
+      <div class="card">
+        <h3>See what's on the radio right now</h3>
+        <p>Reads every group and slot back off the radio and diffs it against the plan here, so you
+        can see what's already correct before overwriting anything.</p>
+        <button class="go" id="btnStartRead">Read radio → compare</button>
+      </div>
+
+      <div class="card">
+        <h3>Read the instructions</h3>
+        <p>Step-by-step for all of the above — connecting, programming, coverage logging, and a
+        plain-language walk through APRS, BSS, TNC and KISS — plus what this app can't do and why.</p>
+        <button class="go" data-go="guide">Instructions</button>
+      </div>
+
+      <div class="card soon">
+        <h3>Build a list for wherever I am <span class="dim">— later</span></h3>
+        <p>The channel library here is this station's own, hand-curated for the Phoenix area. The
+        plan is to let you drop a pin on a map instead, and have a list assembled for that
+        location. Until then: filter the built-in list, or import any CHIRP CSV from the
+        Channels page.</p>
+        <button class="go" data-go="channels" disabled>Not built yet</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="panel" id="pLink">
     <h2>Radio link</h2>
     <div class="row">
       <button id="btnConnect" class="primary">Connect radio</button>
@@ -177,7 +380,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     </details>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pAprs">
     <h2>APRS / BSS settings</h2>
     <details class="note" open>
       <summary style="cursor:pointer;font-weight:650">What do APRS, BSS, KISS and TNC mean?</summary>
@@ -199,7 +402,10 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
         to the radio's TNC the same way, over the same Bluetooth link already used for everything
         else on this page (not a separate Bluetooth connection). Sending packets isn't built yet —
         see <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a> item 2; receiving already shows up in the
-        <b>Protocol log</b> below as <code>packet in…</code>.</p>
+        <b>Protocol log</b> page as <code>packet in…</code>, and — if the coverage log is
+        running — as a row there too, with your position attached.
+        <a href="#" data-go="guide" data-anchor="g-packet">The full APRS / packet walkthrough is in
+        the instructions &rarr;</a></p>
         <p><b>Callsign / SSID</b> — your callsign identifies the station; the SSID (0–15) is a
         suffix (like the <code>-9</code> in <code>N7WGP-9</code>) used when one callsign runs
         several devices at once, so they don't collide on the map.</p>
@@ -252,10 +458,76 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     </div>
     <p class="note" id="bssNote">Not yet round-tripped against real hardware — <b>Read from radio</b>
     first, check the values look sane, then <b>Write to radio</b>. If a write fails, the protocol
-    log below will show the radio's actual error status.</p>
+    <b>Protocol log</b> page will show the radio's actual error status.</p>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pCoverage">
+    <h2>Coverage log</h2>
+    <p class="note" style="margin:0 0 11px">Records a row every time the radio's squelch opens —
+    which channel, how strong, how long, and where you were — plus a GPS breadcrumb trail of
+    everywhere you went, so you can see where you heard nothing as well as where you did.
+    Each run is its own <b>session</b> you can come back to later.
+    <a href="#guide" data-go="guide" data-anchor="g-coverage">How to use this, and what it can't do →</a></p>
+
+    <div id="cov"></div>
+
+    <div class="row" style="margin:11px 0 10px">
+      <button id="btnCovStart" class="primary">Start a session</button>
+      <button id="btnCovStop" disabled>End session</button>
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">end automatically after
+        <input id="covIdle" type="number" min="1" max="240" style="width:58px"> min with nothing
+        heard</label>
+      <span style="flex:1"></span>
+      <button id="btnCovSync">Sync now</button>
+      <button id="btnCovCsv">Export CSV</button>
+      <button id="btnCovGeo">Export GeoJSON</button>
+    </div>
+    <div class="row" style="margin:-4px 0 10px"><span id="syncState"></span></div>
+
+    <div class="row" style="margin:0 0 12px;padding:9px 11px;border:1px solid var(--line);
+      border-radius:8px;background:var(--sunk)">
+      <label class="row" style="gap:6px;font-size:12px;color:var(--muted)">Showing
+        <select id="covSession" style="max-width:340px"></select></label>
+      <button id="btnCovRename">Rename…</button>
+      <button id="btnCovDelete" class="danger">Delete session</button>
+      <span style="flex:1"></span>
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">
+        <input type="checkbox" id="chkCovSites" checked style="width:auto"> repeater sites</label>
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">
+        <input type="checkbox" id="chkCovTrack" checked style="width:auto"> my track</label>
+    </div>
+
+    <div id="covmapWrap"><svg id="covmap" viewBox="0 0 1000 560" role="img"
+      aria-label="Map of logged receptions and where they were heard from"></svg></div>
+    <div class="legend" id="covLegend"></div>
+
+    <div class="stats" id="covStats"></div>
+
+    <h2 style="margin:18px 0 8px">What you heard, by channel</h2>
+    <div class="tablewrap" style="max-height:34vh">
+      <table>
+        <thead><tr><th>Group</th><th>Ch</th><th>Name</th><th>RX (MHz)</th><th>Hits</th>
+          <th>Best</th><th>Airtime</th><th>Furthest</th><th>Last heard</th></tr></thead>
+        <tbody id="covByCh"></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin:16px 0 8px">Every reception</h2>
+    <div class="tablewrap" style="max-height:34vh">
+      <table>
+        <thead><tr><th>Time</th><th>Kind</th><th>Group</th><th>Ch</th><th>Name</th><th>Secs</th>
+          <th>Sig</th><th>Lat</th><th>Lon</th><th>±m</th><th>Mi from QTH</th><th>Note</th></tr></thead>
+        <tbody id="covRows"></tbody>
+      </table>
+    </div>
+    <div class="row" style="margin-top:11px">
+      <span style="flex:1"></span>
+      <button id="btnCovClear" class="danger">Delete every session</button>
+    </div>
+    <p class="note" id="covNote"></p>
+  </div>
+
+  <div class="panel" id="pMap">
     <h2>Repeater map</h2>
     <div class="row" style="margin-bottom:10px">
       <button class="chip on" id="mapMetro">Metro (≤40 mi)</button>
@@ -267,10 +539,12 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       aria-label="Map of repeater sites around the station"></svg></div>
     <p class="note">Click a site to filter the channel list to it. Ring labels are miles from
     the QTH. <b>Site positions are approximate</b> — named peaks and city/landmark centroids,
-    not surveyed antenna locations.</p>
+    not surveyed antenna locations. On the <b>Coverage log</b> page this same map also plots every
+    logged reception, coloured by signal strength — which will zoom it out to cover wherever you
+    drove.</p>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pLayout">
     <h2>Radio layout — what goes where</h2>
     <div class="row" id="grpTabs" style="margin-bottom:10px"></div>
     <div class="row" style="margin-bottom:10px">
@@ -305,7 +579,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     trusting a write.</p>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pLibrary">
     <h2>Channel library</h2>
     <div class="row" id="groupChips"></div>
 
@@ -313,6 +587,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
 
     <div class="row" style="margin:12px 0 10px">
       <button id="btnAddShown">Add all shown → current group</button>
+      <button id="btnCheckList">Check this list</button>
       <span style="flex:1"></span>
       <button id="btnExport">Export CSV</button>
       <input type="file" id="fileCsv" accept=".csv" class="hidden">
@@ -331,9 +606,20 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       </table>
     </div>
     <p class="note" id="tableNote">Click a row to edit it. <b>Read radio → compare</b> fills the last column.</p>
+
+    <div id="checkPanel" class="hidden" style="margin-top:14px;padding:13px 15px;
+      border:1px solid var(--line);border-radius:9px;background:var(--sunk)">
+      <div class="row" style="margin-bottom:4px">
+        <b style="font-size:13px">List review</b>
+        <span style="flex:1"></span>
+        <span id="checkMeta" class="dim" style="font:11px var(--mono)"></span>
+        <button id="btnCheckClose">Close</button>
+      </div>
+      <div id="checkBody"></div>
+    </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pEditor">
     <h2>Channel editor</h2>
     <div class="grid">
       <div class="f"><label>Channel #</label><input id="e_id" type="number" min="0" max="255"></div>
@@ -356,7 +642,282 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     TX and RX are independent, so odd splits just work.</p>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pGuide">
+    <h2>Instructions</h2>
+    <div class="row" style="margin-bottom:14px;font-size:12px">
+      <a href="#" data-go="guide" data-anchor="g-what">What you need</a> ·
+      <a href="#" data-go="guide" data-anchor="g-connect">Connecting</a> ·
+      <a href="#" data-go="guide" data-anchor="g-program">Programming channels</a> ·
+      <a href="#" data-go="guide" data-anchor="g-groups">Groups &amp; slots</a> ·
+      <a href="#" data-go="guide" data-anchor="g-coverage">Coverage log</a> ·
+      <a href="#" data-go="guide" data-anchor="g-packet">APRS, BSS, TNC, KISS</a> ·
+      <a href="#" data-go="guide" data-anchor="g-radiomenu">Set on the radio itself</a> ·
+      <a href="#" data-go="guide" data-anchor="g-trouble">Troubleshooting</a> ·
+      <a href="#" data-go="guide" data-anchor="g-limits">Limits</a>
+    </div>
+    <div class="doc">
+
+    <h3 id="g-what">What you need</h3>
+    <p>A <b>VGC VR-N76</b> or another radio in the same Benshi family — VR-N7500, VR-N7600,
+    BTech UV-Pro, RadioOddity GA-5WB. They all speak the same Bluetooth protocol.</p>
+    <p>A browser that implements <b>Web Bluetooth</b>: Chrome, Edge, Brave or another Chromium
+    browser, on <b>desktop or Android</b>, over <code>https://</code>.</p>
+    <div class="callout"><b>iPhone and iPad cannot run this.</b> Safari and iOS Chrome do not
+    implement Web Bluetooth at all — and on iOS every browser is Safari underneath, so no iOS
+    browser will work. Firefox does not implement it either, on any platform. The channel
+    library, the map and CSV import/export still work in those browsers; only the radio link
+    is missing.</div>
+    <p>Nothing installs, nothing phones home, and the page works offline once loaded. Your
+    channel library, your group layout and your coverage log live in this browser's local
+    storage — clearing site data clears them, so export a CSV if you care about them.</p>
+
+    <h3 id="g-connect">Connecting the radio</h3>
+    <p>Do these in order. The second and fourth steps are the ones people skip, and both produce
+    a failure that looks like the radio simply isn't there.</p>
+    <ol>
+      <li><b>Quit the VGC phone app and turn Bluetooth off on the phone.</b> The radio serves one
+      controller at a time, and a phone that has paired before will silently grab it back.</li>
+      <li><b>Put the radio into Bluetooth pairing mode</b> from its own menu.</li>
+      <li>Press <b>Connect radio</b> (top right of any page here) and pick <code>VR-N76</code>
+      from the browser's device picker.</li>
+      <li><b>Accept the operating system's pairing dialog.</b> This is not optional: the radio
+      accepts an unbonded link and then drops it about a second later, which looks exactly like
+      a failed connection. The browser hands bonding to the OS, so the OS prompt <i>is</i> the
+      browser's pairing prompt. Once only.</li>
+    </ol>
+    <p>If the picker comes up empty, use <b>Show all Bluetooth devices</b> on the Radio link page.
+    BLE advertising names often differ from the name the operating system displays.</p>
+    <p>The link is retried five times automatically, because this radio has a habit of dropping
+    the first attempt right after service discovery starts. Watch the <b>Protocol log</b> page if
+    you want to see it happen.</p>
+
+    <h3 id="g-program">Programming channels onto the radio</h3>
+    <p>The flow is: <b>pick channels → arrange them into groups and slots → write</b>. Nothing is
+    sent to the radio until you press a write button, and every write asks for confirmation
+    first.</p>
+    <ol>
+      <li><b>Read what's already there first.</b> <b>Read radio → compare</b> pulls every slot off
+      the radio and fills the <b>On radio</b> column, so you can see what's already correct.
+      Skipping this is how people overwrite a channel they wanted.</li>
+      <li><b>Narrow the library.</b> Use the category chips (Simplex, Phoenix Metro, Rim Country,
+      GMRS/FRS, Satellite), or go to the <b>Map</b> page and click a site to show only that site's
+      channels — the filter follows you back to the Channels page.</li>
+      <li><b>Pick the target group</b> with the group tabs, then either press
+      <b>Fill empty slots from shown list</b> to drop the whole filtered list in, or click a slot
+      to target it and press <b>+</b> on a specific channel.</li>
+      <li><b>Write.</b> <b>Write this group → radio</b> for one group,
+      <b>Write every group → radio</b> for all of them. Both re-read afterwards so the
+      <b>On radio</b> column reflects what's actually stored, not what you hoped.</li>
+    </ol>
+    <p>Bringing your own list: <b>Import CSV</b> takes a CHIRP-format CSV, which is what most
+    repeater directories and other programming software export. <b>Export CSV</b> writes the same
+    format back out. <b>Reset to built-in</b> throws your edits away and reloads the list this
+    page shipped with.</p>
+
+    <h3 id="g-groups">Groups and slots — what the numbers mean</h3>
+    <p>The radio stores channels in <b>groups</b> (the manual calls them regions or zones) of
+    <b>slots</b>. A VR-N76 is specified at 6 groups of 32, so 192 channels. The radio reports its
+    slots-per-group correctly over Bluetooth but lies about its group count, which is why both
+    numbers are editable on the Channels page — set them to match your radio.</p>
+    <p>The library's own <b>Category</b> (Simplex, Phoenix Metro, …) is just a filing label here.
+    It is not the radio's group. The mapping between the two is deliberately explicit: one library
+    channel can sit in as many groups and slots as you want.</p>
+    <div class="callout"><b>Every group and channel number shown here is 1-based</b>, matching what
+    the radio's own screen displays. The protocol underneath is 0-based; the translation happens
+    at the edge so you never have to think about it.</div>
+    <p><b>Group switching is the one thing still not confirmed on hardware.</b> The command that
+    selects a group returns nothing at all — no acknowledgement, no error — so a wrong value and
+    a working one look identical from here. <b>Probe groups</b> reads channel 1 out of each group
+    and tells you whether they differ. If every group comes back identical, group switching isn't
+    working and you should program one group at a time, switching groups on the radio itself.</p>
+
+    <h3 id="g-coverage">The coverage log</h3>
+    <p>This answers one question: <b>from where can I actually hit which machine?</b> It records a
+    row every time the radio's squelch opens — the channel, the peak signal, how long it lasted,
+    and your position at that moment from the phone's GPS.</p>
+    <h4>How to run it</h4>
+    <ol>
+      <li>Connect the radio.</li>
+      <li>Optionally <b>Read radio → compare</b> first. The log labels each hit with the channel's
+      name and frequency, and it can only do that for slots it has read.</li>
+      <li>Start scanning <b>on the radio</b>, or just park on one channel. Which channels get
+      scanned is the per-channel <b>Scan</b> flag in the channel editor — set it to Skip on the
+      ones you don't want swept.</li>
+      <li>Press <b>Start a session</b> and grant the location permission when the browser asks.</li>
+      <li>Leave this tab in the foreground with the screen on, and drive.</li>
+      <li>Press <b>End session</b> when you're done — or don't, and it will end itself.</li>
+    </ol>
+
+    <h4>Sessions</h4>
+    <p>Each run is a <b>session</b>: one drive, one hilltop, one evening. Pick an old one from the
+    dropdown and the map, the totals and both tables switch to just that run, so you can compare
+    the drive up the Beeline against the drive to Tucson. <b>Rename…</b> gives a session a name you
+    will recognise in six months.</p>
+    <p><b>Sessions end themselves.</b> People forget — especially the person who just parked and
+    walked into a building. If nothing is heard for the number of minutes set next to the
+    start button (10 by default), the session closes on its own and the strip counts down to it
+    while you watch. A session that recorded nothing at all is discarded rather than cluttering
+    the list.</p>
+
+    <h4>The bubble map</h4>
+    <p>This is its own map, not the repeater map, and it fits itself to whatever session you are
+    looking at — including one four hours down the road. Every reception is a bubble at the place
+    you heard it from, <b>sized and coloured by signal strength</b>, so a strong machine is a big
+    green circle and a scratchy one is a small red dot. Hover any bubble for the channel,
+    frequency, exact strength, duration and time.</p>
+    <p>Underneath the bubbles is your <b>breadcrumb track</b> — a point every 25 m or so of
+    movement. This is the half people forget to record: the track shows where you drove and heard
+    <i>nothing</i>, which is what turns a pile of hits into an actual coverage map. Toggle it, and
+    the faint repeater-site rings, above the map. There is a scale bar bottom-left.</p>
+    <div class="callout"><b>The tab has to stay in the foreground.</b> A backgrounded mobile browser
+    suspends Bluetooth notifications and throttles GPS, and you will silently log nothing. The
+    page asks the browser for a screen wake lock when logging starts, but that only keeps the
+    display awake — it does not survive switching apps. Phone in a mount, screen on, this tab
+    in front.</div>
+    <h4>What comes out</h4>
+    <p><b>By channel</b> summarises what you heard and how far from the QTH you were when you
+    heard it. <b>Every reception</b> is the raw list. <b>Export CSV</b> is for a spreadsheet;
+    <b>Export GeoJSON</b> drops straight into any mapping tool that reads it. Both include
+    latitude, longitude and GPS accuracy per row. Ticking <b>plot on the map</b> draws the points
+    onto the repeater map below, coloured by signal strength.</p>
+    <p>The log is capped at 5000 receptions and 8000 breadcrumbs, and lives in this browser only.
+    It survives a reload; it does not survive clearing site data. Export before a long trip's data
+    matters to you. Exports cover whatever the session dropdown is showing — the GeoJSON carries
+    the receptions as points and each session's track as a LineString.</p>
+    <h4>What it can't do — read this before trusting the numbers</h4>
+    <ul>
+      <li><b>It cannot start the scan.</b> There is no known command to start or stop scanning on
+      these radios — the protocol has never been reverse-engineered that far. The scan flag per
+      channel is settable from here; pressing scan is not. Start it on the radio.</li>
+      <li><b>It logs that a signal was there, never what was said.</b> Receive audio runs over
+      Bluetooth Classic, which browsers cannot open at all. There is no way around this from a
+      web page.</li>
+      <li><b>Signal strength is four bits.</b> Sixteen steps, uncalibrated, shown here as a
+      percentage because that is honestly all it is. Good for comparing one spot to another;
+      not a dBm reading, and not something to quote.</li>
+      <li><b>Group and signal strength need the extended status format.</b> Some firmware sends a
+      short status message with neither. If the group column reads 1 everywhere and the signal
+      column is empty, that's what happened — the rest of the row is still good.</li>
+      <li><b>Timing is coarse.</b> The radio is polled every second or so while logging, plus
+      whatever it pushes on its own. A transmission shorter than about a second may be missed,
+      and durations are approximate. Sub-half-second squelch flutter is discarded on purpose.</li>
+      <li><b>Position is the phone's, not the radio's.</b> Which is the better of the two, but it
+      does mean a phone with no GPS fix logs rows with no position — the row still records the
+      reception, just without a location.</li>
+    </ul>
+
+    <h3 id="g-packet">APRS, BSS, TNC and KISS</h3>
+    <h4>The four words</h4>
+    <p><b>APRS</b> — Automatic Packet Reporting System — is the open ham standard for broadcasting
+    your position and short text messages over the air. Anything that speaks APRS can decode it,
+    including <a href="https://aprs.fi" target="_blank" rel="noopener">aprs.fi</a>, which will show
+    your track on a map for anyone to see. It requires a <b>licensed callsign</b>.</p>
+    <p><b>BSS</b> is Vero Telecom's own packet format. Same idea, no callsign required, but only
+    other Benshi-family radios and the VGC phone app understand it. It is the option for someone
+    without a licence. The radio transmits one format or the other, never both — that's the
+    <b>Format</b> selector on the APRS page.</p>
+    <p><b>TNC</b> — Terminal Node Controller — is the packet modem: the thing that turns bytes into
+    tones a radio can transmit, and tones back into bytes. Historically a separate box wired
+    between a radio and a computer. This radio has one built in.</p>
+    <p><b>KISS</b> ("keep it simple, stupid") is the minimal framing protocol a computer uses to
+    hand raw packet bytes to a TNC and get them back, without either end needing to know anything
+    about the other. It's the lingua franca between packet software and modems.</p>
+    <div class="callout"><b>There is no separate connection to make.</b> The radio's TNC is reached
+    over the same Bluetooth link this page already uses for everything else — the same GATT
+    service, the same commands. You do not pair a second time, and there is no serial port or
+    KISS TCP socket involved.</div>
+    <h4>Setting APRS up</h4>
+    <ol>
+      <li>Connect the radio, then open the <b>APRS &amp; packet</b> page.</li>
+      <li>Press <b>Read from radio</b> first, always. A write sends back <i>every</i> field
+      including ones this page doesn't show, so it must start from the radio's real values.</li>
+      <li>Set your <b>callsign</b> and <b>SSID</b>. The SSID is the suffix in
+      <code>N7WGP-9</code> — 0 to 15, used so one callsign can run several stations without them
+      colliding on the map. The convention most people follow: <code>-9</code> for a vehicle,
+      <code>-7</code> for a handheld.</li>
+      <li>Pick a <b>symbol</b>, the two characters that choose the icon APRS maps draw for you.
+      <code>/[</code> is a person, <code>/></code> a car, <code>/-</code> a house. If unsure,
+      leave what the radio shipped with.</li>
+      <li>Set <b>Format</b> to APRS (licensed) or BSS (no licence).</li>
+      <li><b>Share location</b> plus an interval turns on periodic beaconing. Every 600 seconds is
+      polite for a fixed station; 60–120 makes sense while mobile. Faster than that on a busy
+      channel is inconsiderate.</li>
+      <li>The <b>PTT-release</b> toggles decide what goes out automatically the instant you let go
+      of the transmit button — position, ID text, BSS ID, or nothing.</li>
+      <li>Press <b>Write to radio</b>, then <b>Read from radio</b> again to confirm it took.</li>
+    </ol>
+    <h4>Receiving packets</h4>
+    <p>Already works, with no setup beyond being on the right channel. The radio pushes every
+    packet it decodes, and they appear on the <b>Protocol log</b> page as
+    <code>packet in… frag N: …</code> with the printable bytes shown. If the coverage log is
+    running, each packet also becomes a row in it with your position attached.</p>
+    <p>What you'll see is the raw frame, not a parsed message — AX.25 and APRS decoding on top of
+    it isn't built yet. You can usually read callsigns straight out of the ASCII.</p>
+    <h4>Transmitting packets — not built yet</h4>
+    <p>The command is understood (<code>HT_SEND_DATA</code>, with the same fragment framing the
+    receive side already decodes) and it's the next thing on the list, but sending is not wired
+    up in this page. Beacons configured above still transmit — those come from the radio itself
+    on its own timer. What's missing is typing a packet here and having it go out.</p>
+
+    <h3 id="g-radiomenu">What still has to be set on the radio itself</h3>
+    <p>Two settings matter for packet and neither is reachable from this page yet:</p>
+    <ul>
+      <li><b>Digipeater path</b> — usually <code>WIDE1-1</code>, which asks one nearby digipeater
+      to repeat you. <b>Menu → General Settings → APRS Settings → Path</b>. The commands for this
+      are decoded and it's a small job to add; it just isn't in this UI yet.</li>
+      <li><b>Which RF channel carries packet data</b> — <b>Menu → General Settings → Digital Mode
+      → Digital Channel</b>. In North America APRS lives on <b>144.390 MHz</b>. Part of the
+      general radio settings page, which isn't built.</li>
+    </ul>
+    <p>Also on the radio, not here: volume, squelch level, mic gain, dual watch, and the scan
+    start/stop button itself.</p>
+
+    <h3 id="g-trouble">Troubleshooting</h3>
+    <h4>The device picker is empty</h4>
+    <p>The radio isn't in pairing mode, or a phone has already claimed it. Turn the phone's
+    Bluetooth off. Then try <b>Show all Bluetooth devices</b> — the advertised BLE name is often
+    not the name you see in system settings.</p>
+    <h4>It connects and immediately disconnects</h4>
+    <p>Almost always an unaccepted pairing prompt. The radio drops any link that isn't bonded.
+    Look for a system pairing dialog — on Android it can appear as a notification rather than a
+    dialog. If you previously paired and then removed the radio, remove it from the operating
+    system's Bluetooth list as well and pair fresh.</p>
+    <h4>"No Bluetooth adapter"</h4>
+    <p>On macOS: <b>System Settings → Privacy &amp; Security → Bluetooth</b>, enable your browser,
+    then restart the browser. On Brave, Web Bluetooth is behind a flag at
+    <code>brave://flags/#brave-web-bluetooth-api</code>.</p>
+    <h4>Writes fail with an error status</h4>
+    <p>Writing past the radio's real capacity returns <code>INVALID_PARAMETER</code> for each slot.
+    Check the slots-per-group number matches your radio. The <b>Protocol log</b> page shows the
+    radio's actual reply status for every failed command.</p>
+    <h4>The live status strip is empty or missing fields</h4>
+    <p>Some firmware sends the short status format without signal strength or current group. It is
+    not an error and nothing else is affected.</p>
+
+    <h3 id="g-limits">Limits, and the honest disclaimers</h3>
+    <ul>
+      <li><b>No audio, ever.</b> Bluetooth audio and Bluetooth PTT are Classic profiles; browsers
+      only get BLE. The phone app has them because a native app can open Classic. Everything
+      except audio is reachable from here.</li>
+      <li><b>This protocol was reverse-engineered, not documented.</b> The mapping comes from
+      <a href="https://github.com/khusmann/benlink" target="_blank" rel="noopener">benlink</a>
+      by Kyle Husmann, with the group-name and region details from
+      <a href="https://github.com/Ylianst/HTCommander" target="_blank" rel="noopener">HTCommander</a>.
+      Some of it is confirmed against real hardware and some is inference. Where this page is
+      unsure, it says so on the panel itself.</li>
+      <li><b>Read before you write.</b> Every panel that writes says this, and it is not
+      boilerplate — a write sends back whole records, including fields no UI here displays.</li>
+      <li><b>Site positions on the map are approximate</b> — named peaks and city centroids, not
+      surveyed antenna locations. Distances are good to a mile or so, which is the right
+      precision for deciding what to program.</li>
+      <li><b>Transmit only where you're licensed</b>, on frequencies you're authorised to use, at
+      power levels you're allowed. The GMRS and satellite entries in the library in particular
+      have their own rules. Writing bad values to a radio is your responsibility.</li>
+    </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="pLog">
     <h2>Protocol log</h2>
     <div class="row" style="margin-bottom:8px">
       <button id="btnClearLog">Clear</button>
@@ -680,7 +1241,7 @@ function explain(e){
   if (/not found/i.test(msg))
     return ["Connected, but the radio did not expose the expected service.",
       "That device is probably not a Benshi-protocol radio (VR-N76 / UV-Pro / GA-5WB)."];
-  return [`${name}: ${msg}`, "Full detail is in the protocol log below."];
+  return [`${name}: ${msg}`, "Full detail is on the Protocol log page."];
 }
 
 async function connect(showAll){
@@ -766,7 +1327,10 @@ function setConnectedUI(on){
    "btnReadGroupNames","btnRenameGroup"]
     .forEach(id => document.getElementById(id).disabled = !on);
   document.getElementById("btnConnect").disabled = on;
-  renderRows(); renderLayout();
+  const hc = document.getElementById("hdrConnect");
+  hc.textContent = on ? "Disconnect" : "Connect radio";
+  hc.className = on ? "" : "primary";
+  renderRows(); renderLayout(); renderCovState();
 }
 
 let connecting = false;
@@ -808,6 +1372,7 @@ function handleEvent(m){
     case EVENT.HT_STATUS_CHANGED: {
       liveStatus = decodeStatus(m.r, m.r.remainingBits >= 32);
       renderLive();
+      covSample(liveStatus);
       break;
     }
     case EVENT.HT_CH_CHANGED: {
@@ -823,6 +1388,7 @@ function handleEvent(m){
       const ch = withCh ? m.r.int(8) : null;
       const txt = bytes.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
       log(`packet in${ch!=null?` (ch ${ch+1})`:""} frag ${frag}${final?" final":""}: ${txt}`, "l-rx");
+      covPacket(txt, ch);
       break;
     }
     case EVENT.HT_SETTINGS_CHANGED: log("radio settings changed", "l-inf"); break;
@@ -1010,6 +1576,7 @@ async function getHtStatus(){
   const bits = m.r.remainingBits;
   liveStatus = decodeStatus(m.r, bits >= 32);
   renderLive();
+  covSample(liveStatus);
   return liveStatus;
 }
 
@@ -1056,10 +1623,13 @@ function renderLive(){
 
 function startLive(){
   stopLive();
+  /* The coverage log only sees what it samples, so poll harder while it runs.
+     The radio also pushes HT_STATUS_CHANGED on its own; the poll is the floor,
+     not the only source. */
   statusTimer = setInterval(() => {
     if (!radio.connected) return;
     getHtStatus().catch(()=>{});
-  }, 4000);
+  }, cov.on ? 1200 : 4000);
   getHtStatus().catch(e=>log(`status unavailable: ${e.message}`, "l-err"));
   getBattery();
 }
@@ -1266,20 +1836,20 @@ const LIBRARY = [
   {i:102,n:"KA7ZEM",r:449.55,t:444.55,a:{c:100},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
   {i:103,n:"WB7TJD",r:449.6,t:444.6,a:{c:100},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
   {i:104,n:"W7ARA M",r:449.625,t:444.625,a:{c:100},g:"metro",k:"Alma School Rd",y:33.403,x:-111.857,m:"Mesa, 1201 S. Alma School Rd"},
-  {i:105,n:"GMRS 1",r:462.5625,g:"gmrs"},
-  {i:106,n:"GMRS 2",r:462.5875,g:"gmrs"},
-  {i:107,n:"GMRS 3",r:462.6125,g:"gmrs"},
-  {i:108,n:"GMRS 4",r:462.6375,g:"gmrs"},
-  {i:109,n:"GMRS 5",r:462.6625,g:"gmrs"},
-  {i:110,n:"GMRS 6",r:462.6875,g:"gmrs"},
-  {i:111,n:"GMRS 7",r:462.7125,g:"gmrs"},
-  {i:112,n:"GMRS 8",r:467.5625,g:"gmrs"},
-  {i:113,n:"GMRS 9",r:467.5875,g:"gmrs"},
-  {i:114,n:"GMRS 10",r:467.6125,g:"gmrs"},
-  {i:115,n:"GMRS 11",r:467.6375,g:"gmrs"},
-  {i:116,n:"GMRS 12",r:467.6625,g:"gmrs"},
-  {i:117,n:"GMRS 13",r:467.6875,g:"gmrs"},
-  {i:118,n:"GMRS 14",r:467.7125,g:"gmrs"},
+  {i:105,n:"GMRS 1",r:462.5625,w:0,g:"gmrs"},
+  {i:106,n:"GMRS 2",r:462.5875,w:0,g:"gmrs"},
+  {i:107,n:"GMRS 3",r:462.6125,w:0,g:"gmrs"},
+  {i:108,n:"GMRS 4",r:462.6375,w:0,g:"gmrs"},
+  {i:109,n:"GMRS 5",r:462.6625,w:0,g:"gmrs"},
+  {i:110,n:"GMRS 6",r:462.6875,w:0,g:"gmrs"},
+  {i:111,n:"GMRS 7",r:462.7125,w:0,g:"gmrs"},
+  {i:112,n:"GMRS 8",r:467.5625,w:0,p:"low",g:"gmrs"},
+  {i:113,n:"GMRS 9",r:467.5875,w:0,p:"low",g:"gmrs"},
+  {i:114,n:"GMRS 10",r:467.6125,w:0,p:"low",g:"gmrs"},
+  {i:115,n:"GMRS 11",r:467.6375,w:0,p:"low",g:"gmrs"},
+  {i:116,n:"GMRS 12",r:467.6625,w:0,p:"low",g:"gmrs"},
+  {i:117,n:"GMRS 13",r:467.6875,w:0,p:"low",g:"gmrs"},
+  {i:118,n:"GMRS 14",r:467.7125,w:0,p:"low",g:"gmrs"},
   {i:119,n:"GMRS 15",r:462.55,g:"gmrs"},
   {i:120,n:"GMRS 16",r:462.575,g:"gmrs"},
   {i:121,n:"GMRS 17",r:462.6,g:"gmrs"},
@@ -1705,6 +2275,587 @@ function updateSiteSel(){
   } else { el.textContent = ""; btn.classList.add("hidden"); }
 }
 
+/* ============================================================
+   Coverage log -- passive receive logger
+
+   The radio has no known "start scanning" command; nothing here commands
+   the radio at all. It listens to the status the radio already reports
+   (pushed HT_STATUS_CHANGED events plus the poll) and writes down every
+   squelch-open, tagged with the phone's GPS position at that moment.
+
+   One row per reception, not per sample: a row opens when squelch opens
+   and closes when it shuts or the channel changes underneath it.
+
+   Work is grouped into SESSIONS -- one drive, one hilltop, one evening --
+   so a run can be picked out and looked at later. Alongside the receptions
+   each session records a GPS breadcrumb TRACK, because knowing where you
+   heard nothing is half of what a coverage map is for.
+   ============================================================ */
+const LS_COV = "n7wgp.vrn76.coverage.v2";
+const LS_COV_V1 = "n7wgp.vrn76.coverage.v1";
+const COV_MAX = 5000, COV_TRACK_MAX = 8000;
+const COV_IDLE_DEFAULT = 10;                       // minutes of silence -> auto end
+
+const cov = {
+  on:false, sid:null,
+  sessions:[], rows:[], track:[],
+  open:null, fix:null, geoId:null, wake:null, geoErr:null,
+  lastHeard:0, idleMin:COV_IDLE_DEFAULT, idleTimer:null,
+  sel:"all"
+};
+
+function covLoad(){
+  try {
+    const raw = localStorage.getItem(LS_COV);
+    if (raw){
+      const o = JSON.parse(raw);
+      cov.sessions = Array.isArray(o.sessions) ? o.sessions : [];
+      cov.rows     = Array.isArray(o.rows)     ? o.rows     : [];
+      cov.track    = Array.isArray(o.track)    ? o.track    : [];
+      if (o.idleMin) cov.idleMin = o.idleMin;
+      return;
+    }
+  } catch(e){ /* a corrupt log is not worth failing boot over */ }
+  /* Nothing is thrown away on upgrade: the old flat log becomes one session. */
+  try {
+    const old = localStorage.getItem(LS_COV_V1);
+    if (old){
+      const arr = JSON.parse(old);
+      if (Array.isArray(arr) && arr.length){
+        const id = Date.parse(arr[0].t) || Date.now();
+        cov.sessions = [{ id, t0:id, t1:Date.parse(arr[arr.length-1].t) || id,
+                          label:"Imported from the earlier log" }];
+        cov.rows = arr.map(r => Object.assign({ sid:id }, r));
+        covSave();
+        log(`migrated ${arr.length} row(s) from the previous coverage log`);
+      }
+    }
+  } catch(e){}
+}
+function covSave(){
+  try {
+    localStorage.setItem(LS_COV, JSON.stringify({
+      sessions:cov.sessions, rows:cov.rows, track:cov.track, idleMin:cov.idleMin }));
+  } catch(e){ log("coverage log could not be saved: "+e.message, "l-err"); }
+}
+
+const covSessionById = id => cov.sessions.find(x => x.id === id) || null;
+const covRows  = () => cov.sel === "all" ? cov.rows  : cov.rows.filter(r => r.sid === cov.sel);
+const covTrack = () => cov.sel === "all" ? cov.track : cov.track.filter(p => p.sid === cov.sel);
+
+function covSessionLabel(x){
+  const d = new Date(x.t0);
+  const mins = ((x.t1 || Date.now()) - x.t0) / 60000;
+  const n = cov.rows.filter(r => r.sid === x.id).length;
+  const when = d.toLocaleDateString([], { month:"short", day:"numeric" }) + " " +
+               d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+  const dur = mins < 60 ? `${Math.max(1,Math.round(mins))} min` : `${(mins/60).toFixed(1)} hr`;
+  return `${x.label ? x.label + " — " : ""}${when} · ${dur} · ${n} heard` +
+         (x.t1 ? "" : " · running");
+}
+
+/* Name/frequency for a hit. What the radio actually holds (from Read radio)
+   beats the plan; the plan beats nothing. */
+function covChannelInfo(g, ch){
+  const r = radioAt(g, ch);
+  if (r) return { name:(r.name||"").trim(), rx:r.rx_freq };
+  const id = groupSlots(g)[ch];
+  const c = id != null ? libById(id) : null;
+  return c ? { name:c.name, rx:c.rx_freq } : { name:"", rx:null };
+}
+
+function covSample(s){
+  if (!cov.on || !s) return;
+  const openNow = !!(s.sq_open || s.in_rx);
+  const g = s.region != null ? s.region : 0;
+  const ch = s.channel != null ? s.channel : 0;
+  if (cov.open && (!openNow || cov.open.g !== g || cov.open.ch !== ch)) covCloseOpen();
+  if (openNow){
+    if (!cov.open){
+      const info = covChannelInfo(g, ch);
+      cov.open = { t0:Date.now(), g, ch, name:info.name, rx:info.rx,
+                   scanning:!!s.scanning, rssiMax:0, rssiSum:0, n:0, fix:cov.fix };
+    }
+    const o = cov.open;
+    if (s.rssi != null){ o.rssiMax = Math.max(o.rssiMax, s.rssi); o.rssiSum += s.rssi; o.n++; }
+    if (cov.fix && (!o.fix || cov.fix.t > o.fix.t)) o.fix = cov.fix;
+  }
+  renderCovState();
+}
+
+function covCloseOpen(){
+  const o = cov.open; cov.open = null;
+  if (!o) return;
+  const secs = (Date.now() - o.t0)/1000;
+  if (secs < 0.4 && !o.n) return;             // squelch flutter, not a signal
+  covPush({
+    kind:"rx", t:new Date(o.t0).toISOString(), secs:+secs.toFixed(1),
+    g:o.g, ch:o.ch, name:o.name, rx:o.rx, scanning:o.scanning,
+    rssi:o.n ? Math.round(o.rssiMax) : null,
+    rssiAvg:o.n ? Math.round(o.rssiSum/o.n) : null, n:o.n,
+    lat:o.fix ? o.fix.lat : null, lon:o.fix ? o.fix.lon : null,
+    acc:o.fix ? Math.round(o.fix.acc) : null
+  });
+}
+
+/* Packets arrive as events rather than as squelch state, so they get their
+   own row -- same shape, with the decoded text attached. */
+function covPacket(text, ch){
+  if (!cov.on) return;
+  const g = liveStatus && liveStatus.region != null ? liveStatus.region : 0;
+  const c = ch != null ? ch : (liveStatus && liveStatus.channel != null ? liveStatus.channel : 0);
+  const info = covChannelInfo(g, c);
+  covPush({
+    kind:"packet", t:new Date().toISOString(), secs:0, g, ch:c,
+    name:info.name, rx:info.rx, scanning:false,
+    rssi: liveStatus && liveStatus.rssi != null ? Math.round(liveStatus.rssi) : null,
+    rssiAvg:null, n:0, text:String(text).slice(0,140),
+    lat:cov.fix ? cov.fix.lat : null, lon:cov.fix ? cov.fix.lon : null,
+    acc:cov.fix ? Math.round(cov.fix.acc) : null
+  });
+}
+
+function covPush(row){
+  row.sid = cov.sid;
+  cov.rows.push(row);
+  cov.lastHeard = Date.now();
+  if (cov.rows.length > COV_MAX) cov.rows.splice(0, cov.rows.length - COV_MAX);
+  covSave();
+  if (view === "coverage") renderCoverage();
+}
+
+/* A breadcrumb every ~25 m of movement, or every minute standing still --
+   enough to draw the road you drove without filling storage with a parked
+   vehicle. */
+function covBreadcrumb(){
+  if (!cov.on || !cov.fix) return;
+  const last = cov.track.length ? cov.track[cov.track.length-1] : null;
+  const moved = !last || last.sid !== cov.sid ||
+    haversineMi([last.lat,last.lon],[cov.fix.lat,cov.fix.lon]) > 0.0155 ||
+    (cov.fix.t - last.t) > 60000;
+  if (!moved) return;
+  cov.track.push({ sid:cov.sid, t:cov.fix.t, lat:cov.fix.lat, lon:cov.fix.lon,
+                   acc:Math.round(cov.fix.acc) });
+  if (cov.track.length > COV_TRACK_MAX) cov.track.splice(0, cov.track.length - COV_TRACK_MAX);
+  covSave();
+  if (view === "coverage") renderCovMap();
+}
+
+function covVis(){ if (document.visibilityState === "visible" && cov.on) covWakeLock(); }
+async function covWakeLock(){
+  try {
+    if (!("wakeLock" in navigator) || cov.wake) return;
+    cov.wake = await navigator.wakeLock.request("screen");
+    cov.wake.addEventListener("release", () => { cov.wake = null; });
+  } catch(e){ /* wake lock is a nicety; a denied one must not stop logging */ }
+}
+
+/* People forget to press stop -- especially the person who just parked and
+   walked away. A session that has heard nothing for idleMin closes itself. */
+function covIdleArm(){
+  covIdleClear();
+  cov.idleTimer = setInterval(() => {
+    if (!cov.on) return;
+    if (Date.now() - cov.lastHeard >= cov.idleMin * 60000){
+      log(`session ended on its own — nothing heard for ${cov.idleMin} min`);
+      covStop();
+      return;
+    }
+    renderCovState();
+  }, 15000);
+}
+function covIdleClear(){ if (cov.idleTimer){ clearInterval(cov.idleTimer); cov.idleTimer = null; } }
+
+async function covStart(){
+  if (cov.on) return;
+  if (!navigator.geolocation){
+    log("this browser has no geolocation — the coverage log needs it", "l-err"); return;
+  }
+  const t0 = Date.now();
+  cov.sid = t0;
+  cov.sessions.push({ id:t0, t0, t1:null, label:"" });
+  cov.sel = t0;
+  cov.on = true; cov.open = null; cov.geoErr = null; cov.lastHeard = t0;
+  cov.geoId = navigator.geolocation.watchPosition(
+    p => {
+      cov.fix = { lat:p.coords.latitude, lon:p.coords.longitude,
+                  acc:p.coords.accuracy || 0, t:p.timestamp || Date.now() };
+      cov.geoErr = null;
+      covBreadcrumb();
+      renderCovState();
+    },
+    e => { cov.geoErr = e.message || "location unavailable";
+           log("location: "+cov.geoErr, "l-err"); renderCovState(); },
+    { enableHighAccuracy:true, maximumAge:4000, timeout:20000 });
+  document.addEventListener("visibilitychange", covVis);
+  covWakeLock();
+  covIdleArm();
+  if (radio.connected) startLive();          // re-arm the poll at the logging rate
+  else log("session started, but the radio is not connected — " +
+           "nothing will be recorded until it is", "l-err");
+  log("coverage session started", "l-rx");
+  covSave();
+  renderCoverage();
+}
+
+function covStop(){
+  if (!cov.on) return;
+  covCloseOpen();
+  const sess = covSessionById(cov.sid);
+  if (sess) sess.t1 = Date.now();
+  const sid = cov.sid;
+  cov.on = false; cov.sid = null;
+  covIdleClear();
+  if (cov.geoId != null){ navigator.geolocation.clearWatch(cov.geoId); cov.geoId = null; }
+  document.removeEventListener("visibilitychange", covVis);
+  if (cov.wake){ cov.wake.release().catch(()=>{}); cov.wake = null; }
+  if (radio.connected) startLive();
+  /* An empty session is noise in the picker, so it does not survive. */
+  if (sess && !cov.rows.some(r => r.sid === sid) && !cov.track.some(p => p.sid === sid)){
+    cov.sessions = cov.sessions.filter(x => x.id !== sid);
+    if (cov.sel === sid) cov.sel = "all";
+    log("session recorded nothing — discarded");
+  } else {
+    log(`coverage session ended — ${cov.rows.filter(r=>r.sid===sid).length} reception(s)`);
+  }
+  covSave();
+  renderCoverage();
+  syncPush().catch(() => {});     // a finished session belongs on the server
+}
+
+const covMi = r => (r.lat == null ? null : haversineMi(QTH, [r.lat, r.lon]));
+const rssiColor = p => p == null ? "var(--info)"
+  : p < 25 ? "var(--err)" : p < 50 ? "var(--warn)" : p < 75 ? "var(--accent)" : "var(--ok)";
+const covBubbleR = p => p == null ? 4.5 : 4 + 13*(Math.max(0,Math.min(100,p))/100);
+const esc = t => String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ============================================================
+   Coverage bubble map -- its own canvas, not the repeater map.
+
+   Fits itself to the selected session rather than to the QTH, because a
+   session may be four hours down the road. Every reception is a bubble at
+   the place it was heard from, sized and coloured by signal; the breadcrumb
+   track underneath shows where you went and heard nothing.
+   ============================================================ */
+function renderCovMap(){
+  const svg = document.getElementById("covmap");
+  if (!svg) return;
+  const legend = document.getElementById("covLegend");
+  const W = 1000, H = 560, PAD = 58;
+  const rows = covRows().filter(r => r.lat != null);
+  const wantTrack = document.getElementById("chkCovTrack").checked;
+  const trk = wantTrack ? covTrack() : [];
+  const pts = [...rows.map(r=>[r.lat,r.lon]), ...trk.map(p=>[p.lat,p.lon])];
+
+  if (!pts.length){
+    svg.innerHTML = `<text class="hint" x="${W/2}" y="${H/2}" text-anchor="middle">` +
+      esc(cov.rows.length
+        ? "Nothing in this session carries a GPS position."
+        : "Start a session and drive — what you hear shows up here as bubbles.") + "</text>";
+    if (legend) legend.innerHTML = "";
+    return;
+  }
+
+  const lat0 = pts.reduce((a,p)=>a+p[0],0)/pts.length;
+  const kx = Math.cos(lat0*Math.PI/180);
+  const px = p => p[1]*kx, py = p => -p[0];
+  const xs = pts.map(px), ys = pts.map(py);
+  let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  /* A single point would otherwise divide by zero and zoom to infinity. */
+  const MIN_SPAN = 0.006;
+  if (maxX-minX < MIN_SPAN){ const c=(minX+maxX)/2; minX=c-MIN_SPAN/2; maxX=c+MIN_SPAN/2; }
+  if (maxY-minY < MIN_SPAN){ const c=(minY+maxY)/2; minY=c-MIN_SPAN/2; maxY=c+MIN_SPAN/2; }
+  const scale = Math.min((W-2*PAD)/(maxX-minX), (H-2*PAD)/(maxY-minY));
+  const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+  const X = p => W/2 + (px(p)-cx)*scale, Y = p => H/2 + (py(p)-cy)*scale;
+  const inView = (x,y) => x > 6 && x < W-6 && y > 6 && y < H-6;
+
+  let out = "";
+
+  /* Repeater sites, for context only -- they never expand the bounds. The
+     metro cluster is dense enough that labelling every one is unreadable, so
+     reserve all the rings first, then give labels to the busiest sites that
+     still have room and silently drop the rest -- hover still names them. */
+  if (document.getElementById("chkCovSites").checked){
+    const boxes = [];
+    const fits = b => !boxes.some(o => !(b.x2 < o.x1 || b.x1 > o.x2 || b.y2 < o.y1 || b.y1 > o.y2));
+    const visible = siteIndex()
+      .map(st => ({ st, x:X([st.lat,st.lon]), y:Y([st.lat,st.lon]) }))
+      .filter(v => inView(v.x, v.y));
+    visible.forEach(v => boxes.push({ x1:v.x-9, x2:v.x+9, y1:v.y-9, y2:v.y+9 }));
+    /* bubbles own the map -- never write a site label across one */
+    rows.forEach(r => {
+      const x = X([r.lat,r.lon]), y = Y([r.lat,r.lon]), rr = covBubbleR(r.rssi)+2;
+      boxes.push({ x1:x-rr, x2:x+rr, y1:y-rr, y2:y+rr });
+    });
+    const ordered = [...visible].sort((a,b) => b.st.ids.length - a.st.ids.length);
+    ordered.forEach(({ st, x, y }) => {
+      /* Every offset must clear this site's own 9px ring reservation, or the
+         label collides with its own dot and is dropped before it starts. */
+      const w = st.site.length*6.1 + 8, h = 14;
+      let pos = null;
+      for (const [dx, dy, anchor] of [
+        [0,-14,"middle"], [0,25,"middle"], [12,4,"start"], [-12,4,"end"]
+      ]){
+        const lx = x+dx, ly = y+dy;
+        const x1 = anchor === "middle" ? lx-w/2 : anchor === "start" ? lx : lx-w;
+        const b = { x1, x2:x1+w, y1:ly-h, y2:ly+3 };
+        if (b.x1 < 2 || b.x2 > W-2 || b.y1 < 2 || b.y2 > H-2) continue;
+        if (!fits(b)) continue;
+        boxes.push(b); pos = { x:lx, y:ly, anchor }; break;
+      }
+      out += `<g class="csite"><title>${esc(st.site)} — ${st.ids.length} channel(s)</title>` +
+             `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7"/>` +
+             (pos ? `<text class="clab" x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" ` +
+                    `text-anchor="${pos.anchor}">${esc(st.site)}</text>` : "") +
+             `</g>`;
+    });
+  }
+
+  /* the track: one polyline per session so separate runs do not join up */
+  if (trk.length){
+    const bySid = new Map();
+    trk.forEach(p => { if (!bySid.has(p.sid)) bySid.set(p.sid, []); bySid.get(p.sid).push(p); });
+    for (const seg of bySid.values()){
+      if (seg.length > 1){
+        const d = seg.map((p,i) => `${i?"L":"M"}${X([p.lat,p.lon]).toFixed(1)} ${Y([p.lat,p.lon]).toFixed(1)}`).join(" ");
+        out += `<path class="trk" d="${d}"/>`;
+      }
+      seg.forEach(p => {
+        out += `<circle class="trkpt" cx="${X([p.lat,p.lon]).toFixed(1)}" ` +
+               `cy="${Y([p.lat,p.lon]).toFixed(1)}" r="1.7"/>`;
+      });
+    }
+  }
+
+  /* bubbles: strongest are biggest, so draw them first and let the weak ones
+     stay clickable on top */
+  [...rows].sort((a,b) => covBubbleR(b.rssi) - covBubbleR(a.rssi)).forEach(r => {
+    const x = X([r.lat,r.lon]), y = Y([r.lat,r.lon]);
+    const who = r.name || `group ${r.g+1} ch ${r.ch+1}`;
+    const when = new Date(r.t).toLocaleString();
+    out += `<g><title>${esc(who)}${r.rx != null ? " · "+r.rx.toFixed(4)+" MHz" : ""}
+` +
+           `${r.rssi != null ? r.rssi+"% signal" : "signal not reported"} · ` +
+           `${r.kind === "packet" ? "packet" : r.secs+" s"}
+${when}` +
+           `${r.acc != null ? `\nGPS ±${r.acc} m` : ""}</title>` +
+           `<circle class="bub" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" ` +
+           `r="${covBubbleR(r.rssi).toFixed(1)}" fill="${rssiColor(r.rssi)}" ` +
+           `opacity="${r.kind === "packet" ? 0.55 : 0.42}"/></g>`;
+  });
+
+  /* where you are right now, while a session is running */
+  if (cov.on && cov.fix){
+    const x = X([cov.fix.lat,cov.fix.lon]), y = Y([cov.fix.lat,cov.fix.lon]);
+    if (inView(x,y))
+      out += `<g><title>you are here</title><path class="me" d="M${x} ${y-8} L${x+8} ${y} ` +
+             `L${x} ${y+8} L${x-8} ${y} Z"/></g>`;
+  }
+
+  /* scale bar -- without one, bubble spacing means nothing */
+  const pxPerMi = scale/69;
+  const mi = [0.1,0.25,0.5,1,2,5,10,25,50,100,200].find(t => t*pxPerMi >= 110) || 200;
+  const barW = mi*pxPerMi, bx = 26, by = H-26;
+  out += `<g><path class="sb" d="M${bx} ${by-6} L${bx} ${by} L${bx+barW} ${by} L${bx+barW} ${by-6}"` +
+         ` fill="none"/><text class="sblab" x="${bx}" y="${by-10}">${mi < 1 ? mi : Math.round(mi)} mi</text></g>`;
+
+  svg.innerHTML = out;
+
+  if (legend){
+    const band = (c,t) => `<span><i style="background:${c}"></i>${t}</span>`;
+    legend.innerHTML =
+      `<span>bubble = one reception, sized and coloured by signal:</span>` +
+      band("var(--err)","under 25%") + band("var(--warn)","25–50%") +
+      band("var(--accent)","50–75%") + band("var(--ok)","75%+") +
+      band("var(--info)","not reported") +
+      `<span>· <b style="color:var(--accent)">—</b> your track` +
+      `${rows.length ? ` · ${rows.length} plotted` : ""}` +
+      `${trk.length ? ` · ${trk.length} breadcrumbs` : ""}</span>`;
+  }
+}
+
+function renderCovSessions(){
+  const sel = document.getElementById("covSession");
+  if (!sel) return;
+  const ordered = [...cov.sessions].sort((a,b) => b.t0 - a.t0);
+  sel.innerHTML = `<option value="all">All sessions (${cov.rows.length} receptions)</option>` +
+    ordered.map(x => `<option value="${x.id}">${esc(covSessionLabel(x))}</option>`).join("");
+  sel.value = String(cov.sel);
+  if (sel.value !== String(cov.sel)){ cov.sel = "all"; sel.value = "all"; }
+  const one = cov.sel !== "all";
+  document.getElementById("btnCovRename").disabled = !one;
+  document.getElementById("btnCovDelete").disabled = !one;
+}
+
+function renderCovState(){
+  const el = document.getElementById("cov");
+  if (!el) return;
+  const f = cov.fix, o = cov.open;
+  const idleLeft = cov.on
+    ? Math.max(0, Math.ceil((cov.idleMin*60000 - (Date.now() - cov.lastHeard))/60000)) : 0;
+  el.innerHTML =
+    (cov.on ? `<span class="dotlive"></span><span class="val">RECORDING</span>`
+            : `<span class="dim">idle</span>`) +
+    `<span><span class="val">${covRows().length}</span> shown of ${cov.rows.length}</span>` +
+    (cov.geoErr ? `<span style="color:var(--err)">GPS: ${esc(cov.geoErr)}</span>`
+      : f ? `<span>fix <span class="val">${f.lat.toFixed(5)}, ${f.lon.toFixed(5)}</span>` +
+            ` ±${Math.round(f.acc)} m <span class="dim">· ${haversineMi(QTH,[f.lat,f.lon]).toFixed(1)} mi ` +
+            `${bearingOf(QTH,[f.lat,f.lon])} of QTH</span></span>`
+      : cov.on ? `<span class="dim">waiting for a GPS fix…</span>` : "") +
+    (o ? `<span style="color:var(--ok)">receiving — group ${o.g+1} ch ${o.ch+1}` +
+         `${o.name ? " " + esc(o.name) : ""}</span>` : "") +
+    (cov.on ? `<span class="dim">auto-ends in ${idleLeft} min if nothing is heard</span>` : "") +
+    (cov.on && !radio.connected
+      ? `<span style="color:var(--err)">radio not connected</span>` : "");
+}
+
+function renderCoverage(){
+  const start = document.getElementById("btnCovStart");
+  if (!start) return;
+  renderCovSessions();
+  renderCovState();
+  start.disabled = cov.on;
+  document.getElementById("btnCovStop").disabled = !cov.on;
+  document.getElementById("covIdle").value = cov.idleMin;
+
+  const rows = covRows();
+  const withFix = rows.filter(r => r.lat != null);
+  const far = withFix.length ? Math.max(...withFix.map(covMi)) : 0;
+  const secs = rows.reduce((a,r) => a + (r.secs||0), 0);
+  const trk = covTrack();
+  let miles = 0;
+  for (let i=1;i<trk.length;i++)
+    if (trk[i].sid === trk[i-1].sid)
+      miles += haversineMi([trk[i-1].lat,trk[i-1].lon],[trk[i].lat,trk[i].lon]);
+  document.getElementById("covStats").innerHTML =
+    `<span><b>${rows.length}</b> receptions</span>` +
+    `<span><b>${new Set(rows.map(r=>r.g+":"+r.ch)).size}</b> distinct channels</span>` +
+    `<span><b>${withFix.length}</b> with a position</span>` +
+    `<span>furthest from QTH <b>${far.toFixed(1)}</b> mi</span>` +
+    `<span>total airtime <b>${secs<120 ? secs.toFixed(0)+" s" : (secs/60).toFixed(1)+" min"}</b></span>` +
+    (miles > 0.05 ? `<span>travelled <b>${miles.toFixed(1)}</b> mi</span>` : "") +
+    (rows.filter(r=>r.kind==="packet").length
+      ? `<span><b>${rows.filter(r=>r.kind==="packet").length}</b> packets</span>` : "");
+
+  renderCovMap();
+
+  /* by channel */
+  const by = new Map();
+  rows.forEach(r => {
+    const k = r.g+":"+r.ch;
+    let e = by.get(k);
+    if (!e){ e = { g:r.g, ch:r.ch, name:r.name, rx:r.rx, hits:0, best:null, secs:0, last:r.t, mi:null }; by.set(k, e); }
+    e.hits++; e.secs += r.secs||0;
+    if (!e.name && r.name) e.name = r.name;
+    if (e.rx == null && r.rx != null) e.rx = r.rx;
+    if (r.rssi != null && (e.best == null || r.rssi > e.best)) e.best = r.rssi;
+    if (r.t > e.last) e.last = r.t;
+    const mi = covMi(r);
+    if (mi != null && (e.mi == null || mi > e.mi)) e.mi = mi;
+  });
+  const byList = [...by.values()].sort((a,b) => b.hits - a.hits);
+  document.getElementById("covByCh").innerHTML = byList.length
+    ? byList.map(e => {
+        const info = (!e.name || e.rx == null) ? covChannelInfo(e.g, e.ch) : null;
+        const name = e.name || (info && info.name) || "";
+        const rx = e.rx != null ? e.rx : (info ? info.rx : null);
+        return `<tr><td class="num">${e.g+1}</td><td class="num">${e.ch+1}</td>` +
+          `<td>${esc(name) || '<span class="dim">—</span>'}</td>` +
+          `<td class="num">${rx != null ? rx.toFixed(4) : '<span class="dim">—</span>'}</td>` +
+          `<td class="num">${e.hits}</td>` +
+          `<td class="num">${e.best != null ? `<span style="color:${rssiColor(e.best)}">${e.best}%</span>` : '<span class="dim">—</span>'}</td>` +
+          `<td class="num">${e.secs.toFixed(0)} s</td>` +
+          `<td class="num">${e.mi != null ? e.mi.toFixed(1)+" mi" : '<span class="dim">—</span>'}</td>` +
+          `<td>${new Date(e.last).toLocaleString()}</td></tr>`;
+      }).join("")
+    : `<tr><td colspan="9" class="dim">nothing logged yet</td></tr>`;
+
+  /* every reception, newest first, capped for the DOM's sake */
+  const recent = rows.slice(-400).reverse();
+  document.getElementById("covRows").innerHTML = recent.length
+    ? recent.map(r => {
+        const mi = covMi(r);
+        return `<tr><td>${new Date(r.t).toLocaleTimeString()}</td>` +
+          `<td>${r.kind}</td><td class="num">${r.g+1}</td><td class="num">${r.ch+1}</td>` +
+          `<td>${esc(r.name||"")}</td><td class="num">${r.secs ? r.secs.toFixed(1) : ""}</td>` +
+          `<td class="num">${r.rssi != null ? `<span style="color:${rssiColor(r.rssi)}">${r.rssi}%</span>` : ""}</td>` +
+          `<td class="num">${r.lat != null ? r.lat.toFixed(5) : ""}</td>` +
+          `<td class="num">${r.lon != null ? r.lon.toFixed(5) : ""}</td>` +
+          `<td class="num">${r.acc != null ? r.acc : ""}</td>` +
+          `<td class="num">${mi != null ? mi.toFixed(1) : ""}</td>` +
+          `<td>${esc(r.text||"")}</td></tr>`;
+      }).join("")
+    : `<tr><td colspan="12" class="dim">nothing logged yet</td></tr>`;
+
+  const note = document.getElementById("covNote");
+  if (note) note.innerHTML =
+    (cov.rows.length >= COV_MAX
+      ? `<b>The log is full at ${COV_MAX} rows</b> — the oldest are being dropped as new ones arrive. Export, then delete what you no longer need. `
+      : "") +
+    `Kept in this browser only, and only while this tab stays in the foreground — a backgrounded ` +
+    `mobile browser suspends Bluetooth and throttles GPS. Signal strength is the radio's own ` +
+    `4-bit reading shown as a percentage; treat it as relative, not calibrated. ` +
+    `<a href="#" data-go="guide" data-anchor="g-coverage">Full instructions and limits →</a>`;
+}
+
+function covCsv(){
+  const head = ["session","session_label","time_iso","kind","group","channel","name","rx_mhz",
+                "seconds","rssi_pct_max","rssi_pct_avg","samples","lat","lon","acc_m",
+                "mi_from_qth","scanning","text"];
+  const q = v => v == null ? "" : `"${String(v).replace(/"/g,'""')}"`;
+  const lines = [head.join(",")];
+  covRows().forEach(r => {
+    const mi = covMi(r);
+    const sess = covSessionById(r.sid);
+    lines.push([r.sid || "", q(sess ? covSessionLabel(sess) : ""), q(r.t), r.kind, r.g+1, r.ch+1,
+      q(r.name||""), r.rx != null ? r.rx.toFixed(6) : "", r.secs != null ? r.secs : "",
+      r.rssi != null ? r.rssi : "", r.rssiAvg != null ? r.rssiAvg : "", r.n||0,
+      r.lat != null ? r.lat.toFixed(6) : "", r.lon != null ? r.lon.toFixed(6) : "",
+      r.acc != null ? r.acc : "", mi != null ? mi.toFixed(2) : "",
+      r.scanning ? "1" : "0", q(r.text||"")].join(","));
+  });
+  covDownload(lines.join("\n"), "text/csv", "csv");
+  log(`exported ${covRows().length} coverage row(s) as CSV`);
+}
+
+/* Receptions as points, the track as a LineString per session -- so a GIS
+   tool shows both where you heard something and where you had been. */
+function covGeoJson(){
+  const feats = covRows().filter(r => r.lat != null).map(r => ({
+    type:"Feature",
+    geometry:{ type:"Point", coordinates:[+r.lon.toFixed(6), +r.lat.toFixed(6)] },
+    properties:{ session:r.sid, time:r.t, kind:r.kind, group:r.g+1, channel:r.ch+1,
+                 name:r.name||"", rx_mhz:r.rx, seconds:r.secs, rssi_pct:r.rssi,
+                 rssi_pct_avg:r.rssiAvg, acc_m:r.acc,
+                 mi_from_qth:covMi(r) != null ? +covMi(r).toFixed(2) : null, text:r.text||"" }
+  }));
+  const bySid = new Map();
+  covTrack().forEach(p => { if (!bySid.has(p.sid)) bySid.set(p.sid, []); bySid.get(p.sid).push(p); });
+  for (const [sid, seg] of bySid){
+    if (seg.length < 2) continue;
+    const sess = covSessionById(sid);
+    feats.push({
+      type:"Feature",
+      geometry:{ type:"LineString",
+                 coordinates:seg.map(p => [+p.lon.toFixed(6), +p.lat.toFixed(6)]) },
+      properties:{ session:sid, kind:"track", label:sess ? covSessionLabel(sess) : "",
+                   points:seg.length }
+    });
+  }
+  covDownload(JSON.stringify({ type:"FeatureCollection", features:feats }, null, 1),
+              "application/geo+json", "geojson");
+  log(`exported ${feats.length} coverage feature(s) as GeoJSON`);
+}
+
+function covDownload(text, mime, ext){
+  const blob = new Blob([text], { type:mime });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `N7WGP_coverage_${new Date().toISOString().slice(0,10)}.${ext}`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
 /* ---------- render ---------- */
 const fmtFreq = f => f ? f.toFixed(4) : "—";
 function shiftOf(c){
@@ -2037,6 +3188,391 @@ async function writeGroup(g, { confirmFirst = true } = {}){
   return { ok, bad };
 }
 
+/* ============================================================
+   Account
+
+   Registration is invite only and lives on the server. The rule that
+   shapes everything here: a signed-in device must keep working with no
+   signal. The token and user are cached locally, a failed /auth/me is
+   treated as "offline" rather than "signed out", and ONLY an explicit
+   401 from the server ever clears the session. There is no login wall
+   between a parked operator and their channel list.
+   ============================================================ */
+const API = (location.protocol.startsWith("http") ? location.origin : "https://n7wgp.com") + "/api";
+const LS_AUTH = "n7wgp.vrn76.auth.v1";
+const auth = { token:null, user:null, online:true };
+
+function authLoad(){
+  try {
+    const raw = localStorage.getItem(LS_AUTH);
+    if (raw){ const o = JSON.parse(raw); auth.token = o.token || null; auth.user = o.user || null; }
+  } catch(e){}
+}
+function authSave(){
+  try { localStorage.setItem(LS_AUTH, JSON.stringify({ token:auth.token, user:auth.user })); }
+  catch(e){}
+}
+function authClear(){
+  auth.token = null; auth.user = null;
+  try { localStorage.removeItem(LS_AUTH); } catch(e){}
+}
+
+async function api(path, { method="GET", body=null, timeoutMs=20000 } = {}){
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method,
+      headers: Object.assign({ "Content-Type":"application/json" },
+        auth.token ? { Authorization:"Bearer " + auth.token } : {}),
+      body: body ? JSON.stringify(body) : null,
+      signal: ctl.signal
+    });
+  } catch(e){
+    auth.online = false;
+    throw Object.assign(new Error("no connection"), { offline:true });
+  } finally { clearTimeout(timer); }
+  auth.online = true;
+  let data = null;
+  try { data = await res.json(); } catch(e){}
+  if (res.status === 401){
+    authClear(); showAuth();
+    throw new Error((data && data.error) || "Session expired — sign in again.");
+  }
+  if (!res.ok) throw new Error((data && data.error) || `server said ${res.status}`);
+  return data;
+}
+
+function authMsg(text, cls){
+  const el = document.getElementById("authMsg");
+  el.className = cls || "";
+  el.textContent = text || "";
+}
+
+function showAuth(){
+  document.getElementById("auth").classList.remove("hidden");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("nav").classList.add("hidden");
+  document.getElementById("foot").classList.add("hidden");
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("btnSignOut").classList.add("hidden");
+  document.getElementById("hdrConnect").classList.add("hidden");
+  document.getElementById("who").textContent = "";
+}
+
+function showApp(){
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("nav").classList.remove("hidden");
+  document.getElementById("foot").classList.remove("hidden");
+  document.getElementById("btnSignOut").classList.remove("hidden");
+  document.getElementById("hdrConnect").classList.remove("hidden");
+  if (!(navigator.bluetooth && window.isSecureContext))
+    document.getElementById("gate").classList.remove("hidden");
+  const u = auth.user || {};
+  document.getElementById("who").innerHTML =
+    `<b>${esc(u.callsign || u.email || "")}</b>` +
+    (auth.online ? "" : ` <span style="color:var(--warn)">offline</span>`);
+}
+
+/* ---------- coverage sync ---------- */
+let syncBusy = false, lastSync = null;
+
+function renderSyncState(msg){
+  const el = document.getElementById("syncState");
+  if (!el) return;
+  el.textContent = msg != null ? msg
+    : lastSync ? `synced ${new Date(lastSync).toLocaleTimeString()}`
+    : "not synced yet — press Sync now, or it goes up when a session ends";
+}
+
+async function syncPush(){
+  if (!auth.token || syncBusy) return null;
+  syncBusy = true; renderSyncState("sending…");
+  try {
+    const r = await api("/coverage", { method:"POST", timeoutMs:60000,
+      body:{ sessions:cov.sessions, rows:cov.rows, track:cov.track } });
+    lastSync = Date.now(); renderSyncState();
+    return r;
+  } catch(e){
+    renderSyncState(e.offline ? "no connection — it will go up next time" : "sync failed: " + e.message);
+    throw e;
+  } finally { syncBusy = false; }
+}
+
+/* Merge rather than replace: the device may hold sessions the server has
+   never seen, and the server may hold sessions from another device. */
+async function syncPull(){
+  if (!auth.token) return;
+  const r = await api("/coverage", { timeoutMs:60000 });
+  const haveS = new Set(cov.sessions.map(x => x.id));
+  (r.sessions || []).forEach(x => { if (!haveS.has(x.id)) cov.sessions.push(x); });
+  const rk = z => `${z.sid}|${z.t}|${z.g}|${z.ch}|${z.kind}`;
+  const haveR = new Set(cov.rows.map(rk));
+  (r.rows || []).forEach(z => { if (!haveR.has(rk(z))) cov.rows.push(z); });
+  const tk = p => `${p.sid}|${p.t}`;
+  const haveT = new Set(cov.track.map(tk));
+  (r.track || []).forEach(p => { if (!haveT.has(tk(p))) cov.track.push(p); });
+  cov.rows.sort((a, b) => String(a.t).localeCompare(String(b.t)));
+  cov.track.sort((a, b) => a.sid - b.sid || a.t - b.t);
+  covSave();
+  lastSync = Date.now();
+  if (view === "coverage") renderCoverage(); else renderSyncState();
+}
+
+/* ---------- AI list review ---------- */
+async function checkList(){
+  const chans = shown();
+  if (!chans.length){ log("nothing shown to check", "l-err"); return; }
+  const btn = document.getElementById("btnCheckList");
+  const panel = document.getElementById("checkPanel");
+  const body = document.getElementById("checkBody");
+  btn.disabled = true; btn.textContent = "Checking…";
+  panel.classList.remove("hidden");
+  document.getElementById("checkMeta").textContent = "";
+  body.innerHTML = `<p class="note">Reviewing ${chans.length} channel(s). This runs on a model ` +
+                   `and takes up to a minute.</p>`;
+  try {
+    const r = await api("/check-list", { method:"POST", timeoutMs:170000, body:{
+      channels: chans.map(c => ({
+        name: c.name,
+        rx:   c.rx_freq,
+        tx:   c.tx_freq,
+        txt:  toneToText(c.tx_sub_audio),
+        rxt:  toneToText(c.rx_sub_audio),
+        bw:   c.bandwidth ? "wide" : "narrow",
+        pwr:  c.power
+      }))
+    }});
+    renderCheck(r, chans);
+  } catch(e){
+    body.innerHTML = `<p class="note" style="color:var(--err)">` +
+      esc(e.offline ? "No connection — this is the one feature that genuinely needs the network."
+                    : e.message) + `</p>`;
+  } finally { btn.disabled = false; btn.textContent = "Check this list"; }
+}
+
+function renderCheck(r, chans){
+  const findings = r.findings || [];
+  /* The proxy falls back silently when the requested provider is not
+     configured. If a different model answered, say so rather than implying
+     the one that was asked for did the work. */
+  document.getElementById("checkMeta").textContent =
+    `${r.checked} checked · ${findings.length} finding(s)` +
+    (r.source && r.requested && r.source !== r.requested
+      ? ` · answered by ${r.source}, not ${r.requested}` : "");
+  const body = document.getElementById("checkBody");
+  if (!findings.length){
+    body.innerHTML = `<p class="note" style="color:var(--ok)">Nothing flagged across ` +
+                     `${r.checked} channel(s).</p>`;
+    return;
+  }
+  const rank = { error:0, warning:1, note:2 };
+  body.innerHTML = [...findings]
+    .sort((a, b) => (rank[a.severity] ?? 3) - (rank[b.severity] ?? 3))
+    .map(f => {
+      const c = chans[f.i];
+      const who = c ? `${esc(c.name)}${c.rx_freq ? " · " + c.rx_freq.toFixed(4) : ""}`
+                    : `channel ${f.i + 1}`;
+      return `<div class="find ${f.severity}">` +
+        `<span class="sev">${esc(f.severity)}</span><span class="ch">${who}</span><br>` +
+        esc(f.message) +
+        (f.suggest ? ` <span class="sug">→ ${esc(f.suggest)}</span>` : "") +
+        `</div>`;
+    }).join("") +
+    `<p class="note"><b>These are a model's suggestions about your own list, not facts.</b> ` +
+    `Nothing here has changed your library — check anything before you write it to a radio.</p>`;
+}
+
+/* ============================================================
+   Pages
+
+   One long scroll buried the things people actually come here to do, so
+   the panels are grouped into pages instead. Each page names the panels
+   it shows, in the order it wants them -- the map is a site picker at the
+   bottom of Channels, and the canvas the coverage log draws on.
+   ============================================================ */
+const VIEWS = {
+  start:    ["pStart"],
+  radio:    ["pLink"],
+  channels: ["pLibrary","pEditor","pLayout"],
+  map:      ["pMap"],
+  coverage: ["pCoverage"],
+  packet:   ["pAprs"],
+  guide:    ["pGuide"],
+  log:      ["pLog"]
+};
+let view = "start";
+
+function showView(v, anchor){
+  if (!VIEWS[v]) v = "start";
+  view = v;
+  const on = VIEWS[v];
+  document.querySelectorAll("#app > .panel").forEach(p => {
+    const at = on.indexOf(p.id);
+    p.classList.toggle("hidden", at < 0);
+    p.style.order = at < 0 ? 0 : at;
+  });
+  document.querySelectorAll("#nav button").forEach(b =>
+    b.classList.toggle("on", b.dataset.go === v));
+  if (on.includes("pMap")) renderMap();
+  if (v === "coverage") renderCoverage();
+  try { history.replaceState(null, "", "#" + v); } catch(e){}
+  if (anchor){
+    const el = document.getElementById(anchor);
+    if (el){ el.scrollIntoView({ block:"start" }); return; }
+  }
+  window.scrollTo(0, 0);
+}
+
+/* Any element with data-go navigates; data-anchor scrolls to a heading. */
+document.addEventListener("click", ev => {
+  const t = ev.target.closest && ev.target.closest("[data-go]");
+  if (!t || t.disabled) return;
+  ev.preventDefault();
+  showView(t.dataset.go, t.dataset.anchor);
+});
+
+document.getElementById("hdrConnect").onclick = () => {
+  if (radio.connected){ disconnect(); return; }
+  showView("radio");
+  connect(false).catch(onConnectError);
+};
+document.getElementById("btnStartRead").onclick = () => {
+  if (!radio.connected){
+    showView("radio");
+    log("connect the radio first, then Read radio → compare", "l-err");
+    return;
+  }
+  showView("channels");
+  readAll().catch(e => log(e.message, "l-err"));
+};
+
+/* ---------- account ---------- */
+function authTab(which){
+  const login = which === "login";
+  document.getElementById("tabLogin").className  = login ? "on" : "";
+  document.getElementById("tabRedeem").className = login ? "" : "on";
+  document.getElementById("paneLogin").classList.toggle("hidden", !login);
+  document.getElementById("paneRedeem").classList.toggle("hidden", login);
+  authMsg("");
+}
+document.getElementById("tabLogin").onclick  = () => authTab("login");
+document.getElementById("tabRedeem").onclick = () => authTab("redeem");
+
+async function doLogin(){
+  const email = document.getElementById("a_email").value.trim();
+  const pass  = document.getElementById("a_pass").value;
+  if (!email || !pass){ authMsg("Email and password, please.", "err"); return; }
+  authMsg("signing in…");
+  try {
+    const r = await api("/auth/login", { method:"POST", body:{ email, password:pass } });
+    auth.token = r.token; auth.user = r.user; authSave();
+    document.getElementById("a_pass").value = "";
+    authMsg("");
+    showApp();
+    log(`signed in as ${r.user.callsign || r.user.email}`, "l-rx");
+    syncPull().catch(() => {});
+  } catch(e){
+    authMsg(e.offline ? "No connection — signing in for the first time needs the network."
+                      : e.message, "err");
+  }
+}
+async function doRedeem(){
+  const invite   = document.getElementById("a_invite").value.trim().toUpperCase();
+  const email    = document.getElementById("a_email2").value.trim();
+  const callsign = document.getElementById("a_call").value.trim().toUpperCase();
+  const pass     = document.getElementById("a_pass2").value;
+  if (!invite || !email || !pass){ authMsg("Invite code, email and password, please.", "err"); return; }
+  if (pass.length < 10){ authMsg("Use a password of at least 10 characters.", "err"); return; }
+  authMsg("creating your account…");
+  try {
+    const r = await api("/auth/redeem", { method:"POST",
+      body:{ invite, email, password:pass, callsign } });
+    auth.token = r.token; auth.user = r.user; authSave();
+    document.getElementById("a_pass2").value = "";
+    authMsg("");
+    showApp();
+    log(`account created for ${r.user.callsign || r.user.email}`, "l-rx");
+  } catch(e){
+    authMsg(e.offline ? "No connection — redeeming an invite needs the network." : e.message, "err");
+  }
+}
+document.getElementById("btnLogin").onclick  = doLogin;
+document.getElementById("btnRedeem").onclick = doRedeem;
+["a_email","a_pass"].forEach(id => document.getElementById(id)
+  .addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); }));
+["a_invite","a_email2","a_call","a_pass2"].forEach(id => document.getElementById(id)
+  .addEventListener("keydown", e => { if (e.key === "Enter") doRedeem(); }));
+
+document.getElementById("btnSignOut").onclick = async () => {
+  if (cov.on) covStop();
+  /* Try to get anything unsynced up before the token goes away, but never
+     hold a sign-out hostage to the network. */
+  try { await syncPush(); } catch(e){}
+  try { await api("/auth/logout", { method:"POST", timeoutMs:8000 }); } catch(e){}
+  authClear();
+  showAuth();
+  log("signed out");
+};
+
+document.getElementById("btnCovSync").onclick = async () => {
+  try { await syncPush(); await syncPull(); }
+  catch(e){ log("sync: " + e.message, "l-err"); }
+};
+
+document.getElementById("btnCheckList").onclick = () => checkList();
+document.getElementById("btnCheckClose").onclick = () =>
+  document.getElementById("checkPanel").classList.add("hidden");
+
+/* ---------- coverage log ---------- */
+document.getElementById("btnCovStart").onclick = () => covStart();
+document.getElementById("btnCovStop").onclick  = () => covStop();
+document.getElementById("btnCovCsv").onclick   = covCsv;
+document.getElementById("btnCovGeo").onclick   = covGeoJson;
+document.getElementById("chkCovSites").onchange = () => renderCovMap();
+document.getElementById("chkCovTrack").onchange = () => renderCovMap();
+document.getElementById("covSession").onchange = e => {
+  cov.sel = e.target.value === "all" ? "all" : Number(e.target.value);
+  renderCoverage();
+};
+document.getElementById("covIdle").onchange = e => {
+  cov.idleMin = Math.max(1, Math.min(240, parseInt(e.target.value,10) || COV_IDLE_DEFAULT));
+  e.target.value = cov.idleMin;
+  covSave(); renderCovState();
+};
+document.getElementById("btnCovRename").onclick = () => {
+  const x = covSessionById(cov.sel);
+  if (!x) return;
+  const name = prompt("Name this session — where you drove, what you were testing:", x.label || "");
+  if (name == null) return;
+  x.label = name.trim().slice(0, 60);
+  covSave(); renderCoverage();
+};
+document.getElementById("btnCovDelete").onclick = () => {
+  const x = covSessionById(cov.sel);
+  if (!x) return;
+  const n = cov.rows.filter(r => r.sid === x.id).length;
+  if (!confirm(`Delete this session and its ${n} reception(s)? Export first if you want them.`)) return;
+  if (cov.on && cov.sid === x.id) covStop();
+  cov.sessions = cov.sessions.filter(y => y.id !== x.id);
+  cov.rows  = cov.rows.filter(r => r.sid !== x.id);
+  cov.track = cov.track.filter(p => p.sid !== x.id);
+  cov.sel = "all";
+  covSave(); renderCoverage();
+  log(`deleted coverage session (${n} reception(s))`);
+};
+document.getElementById("btnCovClear").onclick = () => {
+  if (!cov.rows.length && !cov.sessions.length) return;
+  if (!confirm(`Delete all ${cov.sessions.length} session(s) and ${cov.rows.length} reception(s)? ` +
+               `Export first if you want them.`)) return;
+  if (cov.on) covStop();
+  cov.sessions = []; cov.rows = []; cov.track = []; cov.open = null; cov.sel = "all";
+  covSave(); renderCoverage();
+  log("coverage log cleared");
+};
+
 /* ---------- wiring ---------- */
 function onConnectError(e){
   const [what, how] = explain(e);
@@ -2171,11 +3707,23 @@ let BRAVE = false;
   try { BRAVE = !!(navigator.brave && await navigator.brave.isBrave()); } catch(e){}
 
   const ok = !!navigator.bluetooth && window.isSecureContext;
-  document.getElementById("app").classList.remove("hidden");
-  document.getElementById("foot").classList.remove("hidden");
-  if (!ok) document.getElementById("gate").classList.remove("hidden");
-  loadLibrary(); loadLayout();
+  authLoad();
+  loadLibrary(); loadLayout(); covLoad();
   fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
+  showView((location.hash || "").replace("#",""));
+  renderCoverage();
+
+  if (!auth.token){ showAuth(); return; }
+
+  /* Trust the cached session immediately so the app is usable before -- and
+     without -- a network round trip, then confirm in the background. */
+  showApp();
+  api("/auth/me").then(r => {
+    auth.user = r.user; authSave(); showApp();
+    syncPull().catch(() => {});
+  }).catch(e => {
+    if (e.offline){ showApp(); log("no connection — working from the cached sign-in"); }
+  });
 
   if (!ok){
     log("browser cannot do Web Bluetooth — library and CSV still work", "l-err");
