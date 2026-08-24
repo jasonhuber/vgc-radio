@@ -46,6 +46,20 @@ Spec says the VR-N76 is **6 groups × 32 = 192 channels**. The radio reported
 `channel_count: 32` over the wire (correct) but a `region_count` of 0 or 1
 (suspect), which is why the group count is manually overridable in the UI.
 
+**Display is 1-based, the wire is 0-based.** Confirmed against a real
+VR-N76 2026-08-24: the radio's own screen calls the first group "1" and the
+first channel in it "1", where the protocol's `SET_REGION`/`channel_id`
+send `0`. Every group and slot/channel number the UI shows — group tabs,
+the slot grid, the live status strip's `ch`/`group`, `Planned`/`On radio`
+(`G1:1`), and the group-related log lines — is `wire value + 1` so it reads
+the same as the radio's screen. `setRegion()`, `readChannel()`,
+`writeChannel()`, and the `RfCh`/`BssSettings` codec are untouched and still
+speak 0-based, exactly as the protocol requires — only display added the
+offset. The one exception left alone on purpose: the **Channel library**
+table's `#` column and the channel editor's **Channel #** field are the
+library's own catalog IDs (from the master CSV), not a radio slot position,
+so they were not renumbered.
+
 ---
 
 ## Roadmap

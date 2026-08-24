@@ -795,7 +795,7 @@ function handleEvent(m){
     }
     case EVENT.HT_CH_CHANGED: {
       const c = decodeRfCh(m.r);
-      log(`radio moved to channel ${c.channel_id}: ${c.name} ${c.rx_freq.toFixed(4)}`, "l-rx");
+      log(`radio moved to channel ${c.channel_id+1}: ${c.name} ${c.rx_freq.toFixed(4)}`, "l-rx");
       break;
     }
     case EVENT.DATA_RXD: {
@@ -805,7 +805,7 @@ function handleEvent(m){
       for (let i=0;i<nbytes;i++) bytes.push(m.r.int(8));
       const ch = withCh ? m.r.int(8) : null;
       const txt = bytes.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
-      log(`packet in${ch!=null?` (ch ${ch})`:""} frag ${frag}${final?" final":""}: ${txt}`, "l-rx");
+      log(`packet in${ch!=null?` (ch ${ch+1})`:""} frag ${frag}${final?" final":""}: ${txt}`, "l-rx");
       break;
     }
     case EVENT.HT_SETTINGS_CHANGED: log("radio settings changed", "l-inf"); break;
@@ -877,10 +877,10 @@ async function probeRegions(){
       const c0 = await readChannel(0);
       const c1 = await readChannel(1).catch(()=>null);
       found.push({ g, c0, c1 });
-      log(`  group ${g}: ch0 = ${c0.name || "(empty)"} ${c0.rx_freq ? c0.rx_freq.toFixed(4) : "—"}` +
-          (c1 ? ` · ch1 = ${c1.name || "(empty)"} ${c1.rx_freq ? c1.rx_freq.toFixed(4) : "—"}` : ""), "l-rx");
+      log(`  group ${g+1}: ch1 = ${c0.name || "(empty)"} ${c0.rx_freq ? c0.rx_freq.toFixed(4) : "—"}` +
+          (c1 ? ` · ch2 = ${c1.name || "(empty)"} ${c1.rx_freq ? c1.rx_freq.toFixed(4) : "—"}` : ""), "l-rx");
     } catch(e){
-      log(`  group ${g}: ${e.message}`, "l-err");
+      log(`  group ${g+1}: ${e.message}`, "l-err");
       break;
     }
   }
@@ -891,7 +891,7 @@ async function probeRegions(){
   else if (found.length > 1)
     log(`${found.length} groups accepted the command but all returned identical channel 0 — ` +
         `either they are all empty, or SET_REGION does not work the way this assumes.`, "l-err");
-  try { await setRegion(0); log("restored to group 0"); } catch(e){}
+  try { await setRegion(0); log("restored to group 1"); } catch(e){}
   regionsProbed = found.length;
   renderRows();
 }
@@ -972,8 +972,8 @@ function renderLive(){
     (rssi != null
       ? `<span>S <span class="bar"><i style="width:${rssi}%"></i></span> <span class="val">${rssi}%</span></span>`
       : "") +
-    (s.channel != null ? `<span>ch <span class="val">${s.channel}</span></span>` : "") +
-    (s.region != null ? `<span>group <span class="val">${s.region}</span></span>` : "") +
+    (s.channel != null ? `<span>ch <span class="val">${s.channel+1}</span></span>` : "") +
+    (s.region != null ? `<span>group <span class="val">${s.region+1}</span></span>` : "") +
     (liveBattery
       ? `<span>batt <span class="val">${liveBattery.pct != null ? liveBattery.pct+"%" : ""}` +
         `${liveBattery.v != null ? " "+liveBattery.v.toFixed(2)+"V" : ""}</span></span>`
@@ -1354,7 +1354,7 @@ function renderGroupTabs(){
     const used = groupSlots(g).filter(Boolean).length;
     const b = document.createElement("button");
     b.className = "chip" + (g === curGroup ? " on" : "");
-    b.textContent = `Group ${g} · ${used}/${SLOTS()}`;
+    b.textContent = `Group ${g+1} · ${used}/${SLOTS()}`;
     b.onclick = () => { curGroup = g; targetSlot = 0; renderLayout(); };
     el.appendChild(b);
   }
@@ -1383,7 +1383,7 @@ function renderLayout(){
     else                          badge = `<span class="st diff" title="${stat.join(', ')}">${stat.length} diff</span>`;
 
     div.innerHTML =
-      `<span class="n">${i}</span>` +
+      `<span class="n">${i+1}</span>` +
       `<span class="dot" style="background:${col}"></span>` +
       `<span class="nm">${c ? `${c.name} <span class="dim">${c.rx_freq.toFixed(3)}</span>`
                             : (r ? `<span class="dim">radio: ${r.name||"?"} ${r.rx_freq.toFixed(3)}</span>` : "empty")}</span>` +
@@ -1409,7 +1409,7 @@ function assignToTarget(channel_id){
   const slots = groupSlots(curGroup);
   slots[targetSlot] = channel_id;
   const c = libById(channel_id);
-  log(`group ${curGroup} slot ${targetSlot} ← ${c ? c.name : channel_id}`);
+  log(`group ${curGroup+1} slot ${targetSlot+1} ← ${c ? c.name : channel_id}`);
   targetSlot = Math.min(targetSlot + 1, SLOTS() - 1);   // advance for fast entry
   saveLayout(); renderLayout(); renderRows();
 }
@@ -1704,7 +1704,7 @@ function renderRows(){
       const hits = radioLocations(c);
       if (!hits.length) stat = '<span class="st missing">not on radio</span>';
       else {
-        const label = hits.map(h => `G${h.g}:${h.slot}`).join(" ");
+        const label = hits.map(h => `G${h.g+1}:${h.slot+1}`).join(" ");
         const exact = hits.every(h => h.exact);
         stat = `<span class="st ${exact ? "match" : "diff"}" title="${
           exact ? "identical on the radio" : "same frequency, but some settings differ"
@@ -1715,13 +1715,13 @@ function renderRows(){
     const planned = [];
     for (let g = 0; g < GROUPS(); g++){
       const at = groupSlots(g).indexOf(c.channel_id);
-      if (at >= 0) planned.push(`G${g}:${at}`);
+      if (at >= 0) planned.push(`G${g+1}:${at+1}`);
     }
     const planCell = planned.length
       ? `<span class="st extra">${planned.join(" ")}</span>`
       : '<span class="dim">—</span>';
     tr.innerHTML =
-      `<td class="plus"><button title="place in group ${curGroup}, slot ${targetSlot}">+</button></td>` +
+      `<td class="plus"><button title="place in group ${curGroup+1}, slot ${targetSlot+1}">+</button></td>` +
       `<td class="num">${c.channel_id}</td>` +
       `<td>${c.name || '<span class="dim">(empty)</span>'}</td>` +
       `<td class="num">${fmtFreq(c.rx_freq)}</td>` +
@@ -1893,26 +1893,26 @@ async function readAll(){
     if (groups > 1){
       try { await setRegion(g); }
       catch(e){
-        log(`cannot switch to group ${g} (${e.message}) — reading group 0 only`, "l-err");
+        log(`cannot switch to group ${g+1} (${e.message}) — reading group 1 only`, "l-err");
         break;
       }
     }
     const slots = new Map();
-    log(`reading group ${g} — ${count} slots…`);
+    log(`reading group ${g+1} — ${count} slots…`);
     for (let i = 0; i < count; i++){
       try {
         const c = await readChannel(i);
         if (c.rx_freq > 0){ slots.set(i, c); total++; }
       } catch(e){
         if (!/NOT_SUPPORTED|INVALID_PARAMETER/.test(e.message))
-          log(`group ${g} slot ${i}: ${e.message}`, "l-err");
+          log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err");
       }
       prog.value = ++done;
       if (i % 8 === 7){ renderRows(); renderLayout(); }
     }
     onRadio.set(g, slots);
     readGroups++;
-    log(`  group ${g}: ${slots.size} programmed`, "l-rx");
+    log(`  group ${g+1}: ${slots.size} programmed`, "l-rx");
   }
 
   if (groups > 1){ try { await setRegion(curGroup); } catch(e){} }
@@ -1930,17 +1930,17 @@ async function writeGroup(g, { confirmFirst = true } = {}){
   const slots = groupSlots(g);
   const items = slots.map((id, i) => ({ i, c: id == null ? null : libById(id) }))
                      .filter(x => x.c);
-  if (!items.length){ log(`group ${g} is empty — nothing to write`); return { ok:0, bad:0 }; }
+  if (!items.length){ log(`group ${g+1} is empty — nothing to write`); return { ok:0, bad:0 }; }
 
   if (confirmFirst && !confirm(
-      `Write ${items.length} channel(s) into radio group ${g}?\n\n` +
-      items.slice(0,8).map(x => `  ${x.i}: ${x.c.name} ${x.c.rx_freq}`).join("\n") +
+      `Write ${items.length} channel(s) into radio group ${g+1}?\n\n` +
+      items.slice(0,8).map(x => `  ${x.i+1}: ${x.c.name} ${x.c.rx_freq}`).join("\n") +
       (items.length > 8 ? `\n  … and ${items.length-8} more` : "") +
       `\n\nThis overwrites those slots.`)) return { ok:0, bad:0 };
 
   if (GROUPS() > 1){
-    try { await setRegion(g); log(`switched to radio group ${g}`); }
-    catch(e){ log(`could not switch to group ${g}: ${e.message}`, "l-err"); return { ok:0, bad:0 }; }
+    try { await setRegion(g); log(`switched to radio group ${g+1}`); }
+    catch(e){ log(`could not switch to group ${g+1}: ${e.message}`, "l-err"); return { ok:0, bad:0 }; }
   }
 
   const prog = document.getElementById("prog");
@@ -1949,12 +1949,12 @@ async function writeGroup(g, { confirmFirst = true } = {}){
   for (const { i, c } of items){
     try {
       await writeChannel(toRadio(Object.assign({}, c, { channel_id: i })));
-      ok++; log(`group ${g} slot ${i} ← ${c.name}`, "l-rx");
-    } catch(e){ bad++; log(`group ${g} slot ${i}: ${e.message}`, "l-err"); }
+      ok++; log(`group ${g+1} slot ${i+1} ← ${c.name}`, "l-rx");
+    } catch(e){ bad++; log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err"); }
     prog.value = ok + bad;
   }
   prog.classList.add("hidden");
-  log(`group ${g}: ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
+  log(`group ${g+1}: ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
   return { ok, bad };
 }
 
@@ -2040,12 +2040,12 @@ document.getElementById("btnFillGroup").onclick = () => {
   }
   saveLayout(); renderLayout(); renderRows();
   const left = shown().length - placed;
-  log(`filled ${placed} slot(s) in group ${curGroup} from the shown list` +
+  log(`filled ${placed} slot(s) in group ${curGroup+1} from the shown list` +
       (left > 0 ? ` — ${left} did not fit; put them in another group` : ""),
       left > 0 ? "l-err" : "l-inf");
 };
 document.getElementById("btnClearGroup").onclick = () => {
-  if (!confirm(`Clear every slot in group ${curGroup}? This only edits the plan, not the radio.`)) return;
+  if (!confirm(`Clear every slot in group ${curGroup+1}? This only edits the plan, not the radio.`)) return;
   layout[curGroup] = new Array(SLOTS()).fill(null);
   saveLayout(); renderLayout(); renderRows();
 };
@@ -2053,7 +2053,7 @@ document.getElementById("btnWriteLayout").onclick = () =>
   writeGroup(curGroup).then(()=>readAll()).catch(e=>log(e.message,"l-err"));
 document.getElementById("btnWriteAllGroups").onclick = async () => {
   const gs = [...Array(GROUPS()).keys()].filter(g => groupSlots(g).some(Boolean));
-  if (!confirm(`Write ${gs.length} group(s) — ${gs.join(", ")} — to the radio?\n\n` +
+  if (!confirm(`Write ${gs.length} group(s) — ${gs.map(g=>g+1).join(", ")} — to the radio?\n\n` +
                `This overwrites every slot listed in those groups.`)) return;
   let ok = 0, bad = 0;
   for (const g of gs){

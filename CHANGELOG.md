@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-24 (evening) — group/channel numbers now match the radio's screen
+
+- **Fixed a display off-by-one**, reported after comparing the app to a real
+  VR-N76: the radio's own screen numbers groups and channels starting at 1,
+  while the wire protocol (`SET_REGION`, `RfCh.channel_id`) is 0-based. The
+  app was showing the raw wire value. Group tabs, the slot grid, the live
+  status strip (`ch`/`group`, the thing `SET_REGION` verification depends
+  on), `Planned`/`On radio` positions, and every group-related log line now
+  add 1 for display only — `setRegion()`, `readChannel()`, `writeChannel()`,
+  and the codec are untouched. The channel library's own `#` column (a
+  catalog ID from the master CSV, not a radio slot) was deliberately left
+  alone. See `PLAN.md`.
+
 ## 2026-08-24 (later) — git repo, APRS/BSS settings page
 
 - Initialized git, pushed to **[github.com/jasonhuber/vgc-radio](https://github.com/jasonhuber/vgc-radio)** (public).
