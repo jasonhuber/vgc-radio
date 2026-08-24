@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-08-24 (handoff) — privacy copy corrected, PLAN.md rewritten
+
+- **Corrected four false privacy claims on the live page.** The footer, the
+  Start page, the guide and the coverage note all still said some version of
+  "nothing is uploaded, no data leaves this page". That stopped being true the
+  moment coverage sync shipped — and what syncs is a timestamped record of
+  where someone drove. All four now say plainly that channels, groups and the
+  CSV stay in the browser while the **coverage log, positions included, is
+  stored on the server against the account**, visible only to that account. The
+  guide also says how to keep a log local (do not sync, do not end a session
+  while online).
+- **Rewrote `PLAN.md` as a cold-start handoff document.** It had accumulated
+  contradictions from incremental edits — a section headed "not yet built"
+  whose body said "built and deployed", a claim the worker source could not be
+  found after it had been found, offline listed as open after it shipped, a
+  broken list numbering, and stale figures. It is now structured for someone
+  picking this up with no context: repo map, commands, state table with how
+  each thing was verified, front-end and API architecture, the security and
+  offline properties that must be preserved, the `SET_REGION` blocker, a
+  prioritised roadmap led by a one-evening hardware pass, hard limits, a
+  "things that have already bitten" list, and the honesty constraints the page
+  makes to its users.
+
 ## 2026-08-24 (cleanup) — GMRS defect fixed, admin user routes, DeepSeek traced
 
 - **Fixed the GMRS bandwidth defect the review feature found**, in the master

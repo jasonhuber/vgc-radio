@@ -1,357 +1,487 @@
-# VGC / Benshi radio control — plan
+# VGC / Benshi radio control — plan and handoff
 
-Written 2026-08-24. Pick this up cold from here.
-
-Live at **<https://n7wgp.com>**. Source of truth is `vgc-programmer.html`
-(one self-contained file). Deploy with `./deploy-n7wgp.sh --apply`.
+Last rewritten **2026-08-24**. This file is written to be picked up **cold**:
+read it top to bottom and you should be able to work without reading the code
+first. `PROTOCOL.md` is the wire reference; `CHANGELOG.md` is the history.
 
 ---
 
-## Where things stand
+## 1. What this is
 
-| Area | State |
+A browser-based programmer and controller for **VGC VR-N76** and other
+**Benshi-protocol** radios (VR-N7500, VR-N7600, BTech UV-Pro, RadioOddity
+GA-5WB), plus a coverage-mapping tool and an AI channel-list reviewer.
+
+Live at **<https://n7wgp.com>** — a Hostinger addon domain, Cloudflare DNS in
+front. Built for the station **N7WGP** (Chandler, AZ, grid DM43bg).
+
+Two deployable pieces:
+
+| Piece | Source | Deployed to |
+|---|---|---|
+| The page | `vgc-programmer.html` — one self-contained file | `n7wgp.com/` |
+| The API | `radio-api/` — PHP + SQLite | `n7wgp.com/api` |
+
+The page talks to the radio over **Web Bluetooth** (BLE only — see §9) and to
+the API for sign-in, coverage sync and list review. It is **invite only**: with
+no session, the page shows nothing but a login card.
+
+---
+
+## 2. Repository map
+
+| Path | What it is |
 |---|---|
-| BLE transport, bonding, retries | **working on real hardware** |
-| Channel read | **working** — reads slots back off the radio |
-| Channel write | **working** — 31 channels written to a real VR-N76 |
-| Channel codec (25-byte `RfCh`) | verified: 57 offline assertions + live round-trip |
-| Group/slot layout editor | built, exercised in-browser, **not yet used against hardware end-to-end** |
-| Repeater map, 80 sites geocoded | working |
-| Live status strip (RSSI, TX/RX, battery, current group) | **built, never seen real data** |
-| Event push (status/channel/packet-in) | **built, never seen real data** |
-| `SET_REGION` group switching | index still unverified, but a real bug that broke every attempt is now fixed — see below |
-| APRS/BSS settings page (`BssSettings`, 46/50-byte codec) | built, 4 offline round-trip assertions, **not yet run against real hardware** |
-| Group (region) rename (`READ`/`WRITE_REGION_NAME`) | **built 2026-08-24**, sourced from HTCommander's hardware-confirmed decode, **not yet round-tripped by this app** |
-| Coverage log (sessions, GPS track, bubble map) | **built 2026-08-24**, **never run against a radio** — see below |
-| Accounts (invite only), coverage sync, AI list review | **built and live 2026-08-24** — `radio-api/`, verified end to end |
-| UI split into pages, on-page instructions | **built 2026-08-24** |
+| `vgc-programmer.html` | **The entire front end.** Markup, CSS and JS in one file |
+| `radio-api/index.php` | **The entire API.** Single-file router |
+| `radio-api/config.php` | Secrets. **Gitignored.** Copy of `config.example.php` |
+| `radio-api/radio-data/` | SQLite database. **Gitignored, server-side only** |
+| `radio-api/deploy.sh` | Publishes the API |
+| `deploy-n7wgp.sh` | Publishes the page |
+| `build-library.mjs` | Master CSV → embedded channel library + site geocoding |
+| `test-codec.mjs` | 76 offline protocol assertions, extracted from the HTML |
+| `PROTOCOL.md` | Wire protocol: framing, every bitfield, what is guessed |
+| `radios/` | Per-radio capacity, quirks, test status |
+| `public/` | Deploy output. **Generated — never edit** |
+| `scan.py` | BLE scan probe, kept as evidence; blocked by macOS TCC |
 
-### The coverage log, and what it is really testing
+Master channel CSV lives **outside** this repo:
+`~/Library/CloudStorage/Dropbox/Personal/HamRadio/03-Codeplugs/Current/MASTER-Channel-List-CORRECTED.csv`
 
-Built 2026-08-24. It is **passive**: it commands the radio not at all. It
-listens to `HT_STATUS_CHANGED` pushes plus the status poll (1.2s while
-logging, 4s otherwise), opens a row when `is_sq || is_in_rx` goes true, closes
-it when squelch shuts or the channel changes underneath it, and tags the row
-with `watchPosition()`'s latest fix. `DATA_RXD` packets get their own rows.
-Export is CSV and GeoJSON; points overlay the repeater map.
+---
 
-**Every field it records comes from `StatusExt` — which this project has never
-seen arrive.** RSSI, `curr_region` and the upper channel bits are all in the
-extended half. So the first real-hardware run of the coverage log is
-simultaneously:
+## 3. How to work on it
 
-1. the hardware test the live status strip has been waiting for,
-2. evidence about whether `curr_region` is real (see the `SET_REGION` question
-   below — watching this number while changing groups on the radio's own keypad
-   is listed there as the cheapest way to settle it), and
-3. the coverage log's own shakedown.
+```bash
+node test-codec.mjs                 # 76 assertions — run before every deploy
+node build-library.mjs              # summary + sanity checks, writes nothing
+node build-library.mjs --write      # regenerate the embedded library from the CSV
+./deploy-n7wgp.sh                   # dry run
+./deploy-n7wgp.sh --apply           # publish the page
+cd radio-api && ./deploy.sh         # dry run
+cd radio-api && ./deploy.sh --apply # publish the API
+php -l radio-api/index.php          # lint the API
+```
 
-Run it before assuming any of it works. If the group column reads 1 everywhere
-and RSSI is blank, the radio is sending the short `Status` and only the
+Both deploys are additive rsync, no `--delete`, dry run by default. The API
+deploy refuses to run with a placeholder secret in `config.php`, never syncs
+`radio-data/` or any `.db`, and afterwards asserts that `config.php` and the
+SQLite file both answer **403**.
+
+### House rules
+
+- `vgc-programmer.html` is the only front-end source file. `public/index.html`
+  is generated at deploy time; never edit it.
+- `test-codec.mjs` extracts the protocol code straight out of the HTML so it
+  cannot drift. Run it before every deploy.
+- Regenerate the library with `node build-library.mjs --write` after editing
+  the master CSV — never hand-edit the `LIBRARY` block.
+- Keep the page **dependency-free and offline-capable**. It is a field tool.
+  The only permitted network calls are to its own `/api`.
+- The page must stay usable with no signal once signed in. See §6.
+
+---
+
+## 4. State of everything
+
+Read the third column carefully: several things are **built but have never
+touched a radio**.
+
+| Area | State | Verified how |
+|---|---|---|
+| BLE transport, bonding, retries | working | on real hardware |
+| Channel read / write | working | 31 channels written to a real VR-N76 |
+| `RfCh` codec (25 bytes) | verified | 76 offline assertions + live round-trip |
+| Group/slot layout editor | built | in-browser only, **not hardware end-to-end** |
+| Repeater map, 80 sites | working | in-browser |
+| Live status strip (RSSI, TX/RX, battery, group) | built | **never seen real data** |
+| Event push (status/channel/packet-in) | built | **never seen real data** |
+| `SET_REGION` group switching | **unresolved** | see §7 — the blocker |
+| APRS/BSS settings page | built | 4 offline assertions, **never run on hardware** |
+| Group (region) rename | built | **never round-tripped on hardware** |
+| Coverage log: sessions, GPS track, bubble map | built | in-browser with synthetic data, **never run against a radio** |
+| Accounts, coverage sync, admin routes | **working** | end-to-end against the live host |
+| AI list review (`/check-list`) | **working** | live; found a real library bug on first use |
+| UI split into pages, on-page instructions | built | in-browser |
+
+---
+
+## 5. The front end
+
+One file, ~4,000 lines, in this order: CSS → markup → JS. The JS sections are
+commented as banners; search for them.
+
+**Pages.** `VIEWS` maps a page name to an ordered list of panel ids, and
+`showView(name, anchor)` toggles `.hidden` and sets CSS `order`. Any element
+with `data-go="<page>"` navigates; add `data-anchor="<id>"` to scroll to a
+heading. Pages: `start`, `radio`, `channels`, `map`, `coverage`, `packet`,
+`guide`, `log`. Deep links work (`#coverage`).
+
+**Key state, all in localStorage:**
+
+| Key | Holds |
+|---|---|
+| `n7wgp.vrn76.library.v1` | the working channel library |
+| `n7wgp.vrn76.layout.v1` | group/slot plan |
+| `n7wgp.vrn76.coverage.v2` | `{sessions, rows, track, idleMin}` |
+| `n7wgp.vrn76.auth.v1` | `{token, user}` |
+
+`coverage.v1` (a flat row array) migrates into one session automatically on
+first load. Do not remove that migration without a version bump.
+
+**Numbering trap.** Display is **1-based**, the wire is **0-based**. Group
+tabs, the slot grid, the status strip and every log line add 1 for display.
+`setRegion()`, `readChannel()`, `writeChannel()` and the codecs are untouched
+and speak 0-based. The one deliberate exception: the Channel library's `#`
+column and the editor's **Channel #** are the library's own catalog IDs from
+the master CSV, not radio slots, so they are not renumbered.
+
+### The coverage log
+
+**Passive. It never commands the radio.** It listens to `HT_STATUS_CHANGED`
+pushes plus the status poll (1.2 s while logging, 4 s otherwise), opens a row
+when `is_sq || is_in_rx` goes true, closes it when squelch shuts or the channel
+changes underneath it, and tags it with `watchPosition()`'s latest fix.
+`DATA_RXD` packets become their own rows. Squelch flutter under 0.4 s with no
+RSSI sample is discarded.
+
+- **Sessions.** One run each. Auto-end after `idleMin` (default 10) minutes
+  with nothing heard, because people forget to press stop. A session that
+  recorded nothing is discarded rather than cluttering the picker.
+- **Track.** A GPS breadcrumb every ~25 m of movement or every 60 s standing
+  still. This is what makes it a coverage map rather than a pile of hits — it
+  shows where you heard *nothing*.
+- **Bubble map.** Its own SVG (`#covmap`), fitted to the selected session, not
+  to the QTH. Each reception is a bubble where it was heard, sized and coloured
+  by signal. The repeater map (`#map`) is a separate thing on its own page and
+  no longer carries coverage points.
+- Caps: 5000 receptions, 8000 breadcrumbs.
+
+**Everything it records comes from `StatusExt`, which this project has never
+seen arrive.** RSSI, `curr_region` and the upper channel bits all live in the
+extended half. So the first real-hardware run is simultaneously (a) the
+hardware test the status strip has been waiting for, (b) evidence on whether
+`curr_region` is real — which is the cheapest way to settle §7 — and (c) the
+coverage log's own shakedown. **If the group column reads 1 everywhere and RSSI
+is blank, the radio is sending short `Status`** and only the
 timestamp/channel/position half of each row is trustworthy.
 
 **Why it cannot start the scan.** No scan start/stop command has been decoded
-for this protocol — not in benlink, not in HTCommander. `RfCh.scan` (which this
-app already writes) only decides whether a channel is *included* in a sweep the
-user starts from the keypad; `Status.is_scan` is read-only telemetry. An
-app-driven sweep — step channel, dwell, sample RSSI, repeat — needs a way to
-set the *current* channel, and there are two candidates, neither implemented:
+for this protocol — not in benlink, not in HTCommander. `RfCh.scan` only marks
+a channel as *included* in a sweep the operator starts from the keypad;
+`Status.is_scan` is read-only telemetry. An app-driven sweep would need a way
+to set the *current* channel; the two untested candidates are
+`WRITE_REGION_CH` (58, undecoded) and `channel_a`/`channel_b` in `Settings`
+(10/11, decoded in benlink, not implemented). Before building that: a sweep
+writes to the radio's settings store hundreds of times an hour. Understand the
+wear implications and gate it behind an explicit opt-in.
 
-- `WRITE_REGION_CH` (58), undecoded; the name is suggestive and nothing more.
-- `channel_a` / `channel_b` in `Settings` (roadmap item 3, decoded in benlink).
+---
 
-Before building that, consider that a sweep hammers the radio's settings store
-hundreds of times an hour. Worth understanding the wear implications, and worth
-gating behind an explicit opt-in.
+## 6. The API (`radio-api/`)
 
-### The backend turn — decided 2026-08-24, not yet built
+PHP 8 + SQLite, single-file router, modelled on `jasonhuber.com/track-api`.
+Function prefix `r_`. Mounted at `/api`; `.htaccess` routes everything to
+`index.php` and forces the `Authorization` header through (Hostinger strips it
+otherwise — that is why the rewrite rule exists, do not delete it).
 
-Direction from the owner, overriding the earlier "no login" recommendation:
-**login is required to use any feature**, the coverage log is stored
-server-side per account, and the AI work is a **checking** pass over a list the
-user imports rather than generation from scratch ("most people will want to
-pull in their own list and then check it"). That reframing is a better product
-than the original generate-a-list idea — it puts a human's own data in front
-and uses the model where it is actually reliable.
+### Routes
 
-**The AI proxy convention is already established** in the Sustav iOS apps
-(`Briga`, `Izraz`, `Pokret`, `Govoriti`, `Pogodi` — see each app's
-`Services/AIService.swift`):
+| Route | Auth | Notes |
+|---|---|---|
+| `GET /api` | — | discovery |
+| `GET /api/health` | — | liveness + user count |
+| `POST /api/auth/redeem` | — | invite + email + password → token |
+| `POST /api/auth/login` | — | email + password → token |
+| `POST /api/auth/logout` | Bearer | revokes the calling token |
+| `GET /api/auth/me` | Bearer | validates a cached token |
+| `GET /api/coverage` | Bearer | pull this account's log |
+| `POST /api/coverage` | Bearer | push sessions/rows/track |
+| `DELETE /api/coverage` | Bearer | `?session=<id>` or `?all=1` |
+| `POST /api/check-list` | Bearer | AI review of a channel list |
+| `POST /api/admin/invite` | Admin | mint codes |
+| `GET /api/admin/invite` | Admin | list codes and who used them |
+| `GET /api/admin/users` | Admin | list accounts |
+| `DELETE /api/admin/users` | Admin | `?email=…` — deletes the account and all its data, frees its invite |
 
-```
-POST https://sustav.dev/v1/prompt
-{ "systemPrompt": "...", "userPrompt": "...", "preferredProvider": "automatic" }
--> { "text": "..." }
-```
+### Security properties — preserve these
 
-The Swift `LLMProvider` enum is `proxy | openai | anthropic`, and Izraz sends
-the string `"automatic"`. **No Chinese-model identifier appears anywhere in the
-client code** — provider routing lives on the server, and the sustav.dev copy
-in this workspace is only the static marketing site, so the server source is
-not here. The one thing still needed before this can be written is the exact
-`preferredProvider` string the proxy expects for the intended model.
+- **Invite only.** There is no open signup route at all. Every account can
+  spend model tokens through the proxy; that is the reason.
+- Passwords: `password_hash` / `password_verify`. Minimum 10 characters.
+- Session tokens are 32 random bytes, stored **hashed with a pepper**
+  (`RADIO_TOKEN_PEPPER`), so a database copy is not a set of live logins.
+  Changing the pepper logs everyone out — the intended panic button.
+- Login runs a `password_verify` even for an unknown email so timing does not
+  reveal which addresses have accounts, and both failure paths return one
+  identical message.
+- Per-IP rate limits on login and redeem; per-user daily cap on `/check-list`.
+- **Every coverage query is scoped by `user_id`.** There is no read of a
+  coverage row without one. Verified: a second account sees nothing.
+- CORS is an explicit origin allow-list. **Never widen it to `*`** — that would
+  let any site on the internet spend a signed-in user's session.
 
-**Built and deployed 2026-08-24.** `radio-api/` — PHP + SQLite, invite only,
-live at `https://n7wgp.com/api`. See `CHANGELOG.md` for the security
-properties and what was verified against the live host.
+### Offline is a first-class requirement
 
-**The DeepSeek routing is not real yet, and the UI says so.** Two corrections
-came out of testing:
+"Login for everything" and "works in a canyon with no signal" are in direct
+conflict, and the resolution is load-bearing:
 
-- The proxy is **`https://api.sustav.dev/v1/prompt`** (Cloudflare Worker). The
-  bare `sustav.dev/v1/prompt` in some Swift comments is the static marketing
-  site and 404s.
-- The worker's `/health` reports `configuredProviders: ["openai","anthropic"]`
-  and does **not** reject an unknown provider — it silently falls back and
-  names what actually answered in a `source` field. Asking for `deepseek`
-  today returns OpenAI. The API forwards `source` and the review panel prints
-  "answered by openai, not deepseek" rather than pretending.
-  **Next step: add DeepSeek to the worker's configured providers.** No change
-  is needed here when that happens — `RADIO_PROXY_PROVIDER` is already
-  `deepseek`.
+- The token and user are cached in localStorage.
+- The app renders from cache **before** any network round trip.
+- A failed `/auth/me` means **offline**, never signed out.
+- **Only an explicit 401 clears a session.**
+- Sessions last 180 days.
 
-**The one remaining step is a secret, and it is not this project's to set.**
-The worker behind `api.sustav.dev` is
-`Sustav Dev/Pogodi/ios/cloudflare-worker`, and DeepSeek is already implemented
-in it. `availableProviders()` lists a provider only when its API key exists, so:
+Do not "tidy" this into a blocking auth check on boot. There must never be a
+login wall between a parked operator and their channel list.
+
+### Sync
+
+Push and pull **merge**, never replace, so two devices can both contribute.
+Re-pushing is idempotent: rows key on `sid|t|g|ch|kind`, track on `sid|t`.
+A finished session uploads itself. Verified by wiping the browser copy and
+pulling it all back.
+
+### Credentials
+
+`radio-api/config.php` (gitignored, 403 on the server) holds
+`RADIO_ADMIN_TOKEN` and `RADIO_TOKEN_PEPPER`. Read the admin token locally:
 
 ```bash
-cd "~/Library/CloudStorage/Dropbox/Personal/Sustav Dev/Pogodi/ios/cloudflare-worker"
+php -r 'require "radio-api/config.php"; echo RADIO_ADMIN_TOKEN, PHP_EOL;'
+```
+
+Mint invites:
+
+```bash
+curl -s -X POST https://n7wgp.com/api/admin/invite \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"count":3,"note":"who for"}'
+```
+
+SSH credentials for both deploys come from
+`../../jasonhuber.com/llm-api/.env` — n7wgp.com is an addon domain on that
+same Hostinger account.
+
+### The AI proxy
+
+```
+POST https://api.sustav.dev/v1/prompt
+{ "systemPrompt": …, "userPrompt": …, "preferredProvider": "deepseek" }
+-> { "text": …, "source": "openai" }
+```
+
+Two traps, both already hit:
+
+1. The endpoint is **`api.sustav.dev`**. The bare `sustav.dev/v1/prompt` that
+   appears in some Swift comments is the static marketing site and **404s**.
+2. The worker **does not reject an unknown provider** — it silently falls back
+   and names what actually answered in `source`. So a wrong provider string
+   looks like success. The API forwards `source` and the review panel prints
+   "answered by openai, not deepseek" rather than pretending.
+
+The worker source is `Sustav Dev/Pogodi/ios/cloudflare-worker` (routed to
+`api.sustav.dev`). **DeepSeek is already fully implemented there** —
+`Provider` includes it, `DEEPSEEK_MODEL = "deepseek-v4-flash"`, routed to
+DeepSeek's Anthropic-compatible surface. `availableProviders()` lists a provider
+only when its API key exists, so the only missing piece is the secret:
+
+```bash
+cd "$HOME/Library/CloudStorage/Dropbox/Personal/Sustav Dev/Pogodi/ios/cloudflare-worker"
 npx wrangler secret put DEEPSEEK_API_KEY
 ```
 
-After that `/health` should list `deepseek` first and the review panel will say
-"answered by deepseek". No change is needed here.
+Nothing in this project changes when that lands — it already asks for
+`deepseek`, and the worker orders providers cheapest-first. Note the worker's
+`DEFAULT_PROVIDER` is portfolio-wide, so this affects every Sustav app that
+does not pin a provider.
 
-Still open:
+---
 
-1. **Offline.** "Login for everything" and "works in the field with no signal"
-   are in direct conflict. The fix is standard and must be built in from the
-   start: authenticate once, cache the session token, and let every local
-   feature keep working offline against it — never a login wall between a
-   parked operator and their channel list.
-4. **Coverage privacy.** A coverage log is a timestamped record of where
-   someone drove. Storing it server-side makes the current footer claim
-   ("nothing is uploaded, no data leaves this page") false, so that copy has to
-   change honestly, and per-user isolation has to be real rather than assumed.
+## 7. The blocker: does `SET_REGION` actually switch groups?
 
-### The one thing blocking everything else
+**Still unresolved.** This gates the whole multi-group story.
 
-**Does `SET_REGION` (command 60) actually switch channel groups?** Still open
-— but a real bug in how this app called it just got fixed, and it may have
-been the whole reason this looked unverified.
-
-**2026-08-24 finding:** `SET_REGION` gets **no reply at all** — confirmed by
-[Ylianst/HTCommander](https://github.com/Ylianst/HTCommander)'s independent,
-hardware-tested protocol notes (see `PROTOCOL.md`). This app's `setRegion()`
-previously did `await request(...)` like every other command, which sits on
-`radio.pending` waiting for a reply that was never coming — a silent 5-second
-timeout on *every single call*, including the very first one inside "Probe
-groups." That means every past test of group switching may have failed for a
-reason that has nothing to do with whether the `u8` index guess is correct.
-`setRegion()` is now fire-and-forget (`sendNoReply()`) with a 150ms settle
-before the next command. **This needs a fresh hardware test** — the index
-guess itself is still unconfirmed.
+`SET_REGION` (60) gets **no reply at all** — confirmed by HTCommander's
+hardware-tested notes. This app used to `await request(...)` like every other
+command, burning a silent 5-second timeout on *every* call including the first
+one inside "Probe groups". That is fixed (`sendNoReply()` plus a 150 ms
+settle), which means **every previous test of group switching may have failed
+for a reason unrelated to the index guess.** Needs a fresh hardware test.
 
 Three ways to settle it, cheapest first:
 
-1. **Watch `curr_region` in the live status strip.** `StatusExt` reports the
-   current group. Change groups using the radio's own menu and see whether the
-   number tracks. That proves the field is real and gives you known-good values.
+1. **Watch `curr_region` in the status strip** while changing groups on the
+   radio's own keypad. Proves the field is real and gives known-good values.
+   Running the coverage log does this for free.
 2. **Press "Probe groups."** It calls `setRegion(g)` then reads channel 0 of
-   each group. Distinct contents per group ⇒ it works. Identical contents ⇒ the
-   guess is wrong.
-3. If wrong, capture what the VGC phone app actually sends. `SET_REGION` may
-   take a 16-bit index, or group switching may run through `WRITE_REGION_CH`
-   (58) instead.
+   each. Distinct contents ⇒ it works. Identical ⇒ the guess is wrong.
+3. If wrong, capture what the VGC phone app sends. `SET_REGION` may take a
+   16-bit index, or switching may run through `WRITE_REGION_CH` (58).
 
-Spec says the VR-N76 is **6 groups × 32 = 192 channels**. The radio reported
-`channel_count: 32` over the wire (correct) but a `region_count` of 0 or 1
-(suspect), which is why the group count is manually overridable in the UI.
-
-**Display is 1-based, the wire is 0-based.** Confirmed against a real
-VR-N76 2026-08-24: the radio's own screen calls the first group "1" and the
-first channel in it "1", where the protocol's `SET_REGION`/`channel_id`
-send `0`. Every group and slot/channel number the UI shows — group tabs,
-the slot grid, the live status strip's `ch`/`group`, `Planned`/`On radio`
-(`G1:1`), and the group-related log lines — is `wire value + 1` so it reads
-the same as the radio's screen. `setRegion()`, `readChannel()`,
-`writeChannel()`, and the `RfCh`/`BssSettings` codec are untouched and still
-speak 0-based, exactly as the protocol requires — only display added the
-offset. The one exception left alone on purpose: the **Channel library**
-table's `#` column and the channel editor's **Channel #** field are the
-library's own catalog IDs (from the master CSV), not a radio slot position,
-so they were not renumbered.
+The VR-N76 is specced at **6 groups × 32 = 192**. The radio reports
+`channel_count: 32` correctly but a `region_count` of 0 or 1, which is why the
+group count is manually overridable in the UI.
 
 ---
 
-## Roadmap
+## 8. Roadmap
 
-Ordered by value per unit of effort. Items 1–3 are fully decoded in benlink —
-no reverse engineering needed, just implementation.
+### 8.1 Hardware pass — do this first, it costs one evening
 
-### 1. APRS / BSS settings page — **built 2026-08-24, needs a hardware pass**
+Nothing below matters as much as putting a radio in front of what is already
+built. In one sitting you can settle §7, the status strip, event push, the
+coverage log, the APRS panel and group rename. Order:
 
-`READ_BSS_SETTINGS` (33) / `WRITE_BSS_SETTINGS` (34). Fully decoded in
-`benlink/protocol/command/bss_settings.py`. Sets the callsign and beacon once
-from a keyboard instead of thumbing radio menus. In-app help panel explains
-APRS/BSS/KISS/TNC in plain language, cross-referenced against the radio's own
-menu tree (`Menu → General Settings → APRS Settings` / `Digital Mode`) per the
-official VR-N76 manual. **Next**: read from a real radio, confirm the field
-values match the phone app, then a write round-trip.
+1. Connect. Watch the status strip — does RSSI/group appear (`StatusExt`)?
+2. Change groups on the keypad. Does `curr_region` track?
+3. Press "Probe groups."
+4. Start a coverage session, drive around the block, check the bubble map.
+5. "Read from radio" on the APRS panel; compare to the phone app; write back.
+6. "Read group names"; rename one.
 
-`BSSSettings` bitfield, in order:
+Record what you learn in `radios/VR-N76.md` and `CHANGELOG.md`.
 
-| Bits | Field |
-|---|---|
-| 4 | `max_fwd_times` |
-| 4 | `time_to_live` |
-| 1 | `ptt_release_send_location` |
-| 1 | `ptt_release_send_id_info` |
-| 1 | `ptt_release_send_bss_user_id` |
-| 1 | `should_share_location` |
-| 1 | `send_pwr_voltage` |
-| 1 | `packet_format` (0 = BSS, 1 = APRS) |
-| 1 | `allow_position_check` |
-| 1 | pad |
-| 4 | `aprs_ssid` |
-| 4 | pad |
-| 8 | `location_share_interval` (×10 seconds) |
-| 32 | `bss_user_id_lower` |
-| 96 | `ptt_release_id_info` (12 chars) |
-| 144 | `beacon_message` (18 chars) |
-| 16 | `aprs_symbol` (2 chars) |
-| 48 | `aprs_callsign` (6 chars) |
+### 8.2 Packet terminal (KISS TNC)
 
-`BSSSettingsExt` appends `bss_user_id_upper` (32 bits) — switch on body length,
-same trick as `Status` vs `StatusExt`.
+Receive already works (`DATA_RXD` → protocol log → coverage rows). Missing:
 
-Read body is a literal `2` (u8). UI: callsign **N7WGP**, SSID, symbol, beacon
-text, share interval, and the PTT-release toggles.
-
-### 2. Packet terminal (KISS TNC)
-
-Receive already works — `DATA_RXD` events are decoded and printed to the log.
-What is missing is transmit and proper framing.
-
-- **Send:** `HT_SEND_DATA` (31). Body is `TncDataFragment`:
-  `is_final_fragment:1 | with_channel_id:1 | fragment_id:6 | data | [channel_id:8]`.
+- **Send:** `HT_SEND_DATA` (31), body is `TncDataFragment`
+  (`is_final:1 | with_channel_id:1 | fragment_id:6 | data | [channel_id:8]`).
   Fragment anything longer than one BLE write.
-- **Receive:** already wired in `handleEvent()`, currently dumped as ASCII.
-- **Then:** AX.25 frame decode → APRS parse (position, message, status) → show
-  callsigns and positions. Position reports could drop straight onto the
-  existing repeater map, which already has a working projection.
+- **Then:** AX.25 decode → APRS parse → positions onto the map, which already
+  has a working projection.
 
-### 3. Radio settings page
+### 8.3 Radio settings page
 
-`READ_SETTINGS` (10) / `WRITE_SETTINGS` (11), decoded in `settings.py`. ~60
-fields: squelch, mic gain, TX time limit, TX hold, dual watch, power saving,
-auto power off, screen timeout, PTT lock, NOAA channel, VFO frequencies and
-power, time offset, imperial units.
+`READ_SETTINGS` (10) / `WRITE_SETTINGS` (11), decoded in benlink's
+`settings.py`. ~60 fields: squelch, mic gain, TX time limit, dual watch, power
+saving, screen timeout, PTT lock, NOAA channel, VFO frequencies, time offset.
+Gate `ch_data_lock` and `ptt_lock` behind a confirm — both can make the radio
+confusing until you find them again. This also unlocks `channel_a`/`channel_b`,
+which is the prerequisite for any app-driven scan (§5).
 
-Worth gating the dangerous ones behind a confirm — `ch_data_lock` and
-`ptt_lock` can make the radio confusing until you find them again.
+### 8.4 Smaller wins
 
-### 4. Check my imported list — the AI feature, as redefined 2026-08-24
-
-**Superseded the "generate a list from a pin" idea.** The user imports their own
-CHIRP CSV — which they already can — and the model *checks* it: flags tones
-that look wrong for the band, offsets that do not match the standard plan,
-duplicate or out-of-band frequencies, names that will truncate at 10
-characters, and entries that look stale. Findings land as proposed edits in the
-existing diff UI, never written to a radio unreviewed.
-
-This is the better shape: it uses the model where it is reliable (spotting
-inconsistency in data a human supplied) instead of where it is not (recalling
-specific repeater frequencies from memory). It also needs no repeater database
-and no licensing question.
-
-The original idea, kept for reference: **drop a pin, get a list built for that
-place** — repeaters in range, sorted by distance, with tones.
-
-Open questions before this is a plan, not a wish:
-
-- **Where does the data come from?** RepeaterBook has an API and clear terms;
-  the current 80-site list was scraped from it in 2021 and is stale. Any
-  answer has to respect the source's licence, and the page is currently
-  dependency-free and makes zero network calls — a lookup breaks both
-  properties, so it must be an explicit, optional, clearly-labelled action,
-  never something the page does on load.
-- **Where does the work happen?** A model call needs a backend and a key; the
-  page has neither, by design. A precomputed regional bundle the page fetches
-  on demand keeps the offline-first property and is much cheaper.
-- **How is a bad suggestion caught?** A wrong tone or offset is a channel that
-  silently doesn't work in the field. Anything generated must land in the
-  library as *proposed*, diffable and editable, before it can be written to a
-  radio.
-
-The card for this is already on the Start page, marked "not built yet".
-
-### 5. Smaller wins
-
-- **GPS position** — `SET_POSITION` (32); controller exposes `position()`.
+- **APRS path** — `SET_APRS_PATH` (71) / `GET_APRS_PATH` (72), decoded by
+  HTCommander: a plain UTF-8 string, reply `[status] + path`. Cheap. The APRS
+  panel currently tells users to set it from the radio's menu.
+- **GPS position** — `SET_POSITION` (32).
 - **PF keys** — `GET_PF` (55) / `SET_PF` (56), decoded in `pf.py`.
-- ~~**Group names**~~ — **built 2026-08-24.** `READ_REGION_NAME` (73) /
-  `WRITE_REGION_NAME` (59), decoded by HTCommander (not benlink — see
-  `PROTOCOL.md`). "Read group names from radio" / "Rename this group…" in
-  the Radio layout panel. Independent of the `SET_REGION` question — both
-  take the region index directly.
-- **APRS path** — `SET_APRS_PATH` (71) / `GET_APRS_PATH` (72) are now
-  decoded too (HTCommander): a plain variable-length UTF-8 string, reply
-  `[status] + path`. Cheap to add — the BSS/APRS settings panel currently
-  tells users to set this from the radio's own menu because it wasn't
-  decoded when that panel was built; it now can be added to it directly.
-- Import the AZ frequency coordinator's 70cm PDF to refresh tones; the
-  RepeaterBook data behind the current list was last updated 2021.
-- **Coverage log follow-ons**, once it has run on hardware: a "heard here /
-  not heard here" view that pairs receptions against silence, an import so an
-  older log can be reloaded after clearing site data, and IndexedDB instead of
-  localStorage if 3000 rows turns out to be the binding limit.
+- **Password reset.** There is none, and no email is sent from that host.
+  Today recovery means deleting the account with the admin token and issuing a
+  fresh invite. Worth building before handing codes to anyone else.
+- **Owner-visible admin UI.** The API has no notion of an owner *account* —
+  admin is a separate Bearer token used from curl. If the owner should see the
+  user list in the browser, that is a small addition.
+- **Coverage follow-ons:** a "heard here / not heard here" view pairing
+  receptions against track silence; import so an old export can be reloaded;
+  IndexedDB if 5000 rows becomes the binding limit.
+- Refresh tones from the AZ frequency coordinator's 70cm PDF — the
+  RepeaterBook data behind the current list was last updated **2021**.
 
-### Not decoded — reverse engineering required
+### 8.5 Location-driven channel lists — deferred, not abandoned
 
-FM broadcast control (`RADIO_*`, 24–28), text messages (`GET_MSG`/`SET_MSG`,
-67/68), advanced settings (29/30), `SET_VOLUME` (23), `SET_HT_ON_OFF` (21),
-`READ_FREQ_RANGE` (39). `SET_REGION` (60) request/reply shape is now known
-(see above) — what's still unconfirmed is only whether the `u8` index means
-what this app assumes.
+The original idea was: drop a pin, get a list built for that place. It was
+**superseded** by the list-review feature (§6), which is now live and needs no
+repeater database and no licensing question. If the pin idea comes back, the
+three questions that were never answered:
 
-### Will never work in a browser
+- **Where does the data come from?** RepeaterBook has an API and clear terms.
+  Any answer must respect the source's licence.
+- **Where does the work happen?** A precomputed regional bundle fetched on
+  demand preserves the offline-first property; a live model call in the request
+  path does not.
+- **How is a bad suggestion caught?** A wrong tone is a channel that silently
+  fails in the field. Anything generated must land as *proposed* and diffable.
 
-**Audio.** Bluetooth audio is a Classic profile (HFP/A2DP); Web Bluetooth is
-BLE-only. No receive audio, no Bluetooth PTT. The HT app gets this because a
-native app can open Classic profiles. Everything except audio is reachable.
+The Start page still carries a card for this, marked "not built yet".
+
+### 8.6 Not decoded — reverse engineering required
+
+FM broadcast control (`RADIO_*`, 24–28), text messages (67/68), advanced
+settings (29/30), `SET_VOLUME` (23), `SET_HT_ON_OFF` (21), `READ_FREQ_RANGE`
+(39), `WRITE_REGION_CH` (58). For `SET_REGION` (60) the request/reply shape is
+known; only the meaning of the index is unconfirmed.
 
 ---
 
-## Adding the VR-N7600
+## 9. Hard limits — do not try to design around these
 
-The protocol is the same across Benshi radios, and the app already reads
-capacity from the device rather than hard-coding it, so **it should mostly just
-work**. Expected steps:
+- **Audio is impossible.** Bluetooth audio is a Classic profile (HFP/A2DP);
+  Web Bluetooth is BLE-only. No receive audio, no Bluetooth PTT, ever. The
+  phone app has it because a native app can open Classic profiles. Everything
+  except audio is reachable.
+- **iOS cannot run this.** No iOS browser implements Web Bluetooth — they are
+  all Safari underneath. Firefox does not either, on any platform.
+- **The radio requires a bonded link.** It accepts an unbonded central and
+  drops it about a second later, which looks exactly like a failed connection.
+  The OS pairing prompt *is* the browser's pairing prompt.
+- **RSSI is 4 bits.** Sixteen uncalibrated steps. Relative, never dBm.
+- **The tab must stay in the foreground while logging.** A backgrounded mobile
+  browser suspends BLE notifications and throttles GPS.
 
-1. Connect and check the device-info line — `region_count × channel_count` is
-   the whole capacity story.
+---
+
+## 10. Adding the VR-N7600
+
+The protocol is shared and the app reads capacity from the device, so it should
+mostly just work.
+
+1. Connect, check the device-info line — `region_count × channel_count` is the
+   whole capacity story.
 2. Note anything odd in `radios/VR-N7600.md`.
-3. The channel library is currently seeded from this station's CSV. If the
-   N7600 wants a different list, regenerate with `build-library.mjs` against a
-   different CSV, or import one in the browser.
+3. Reseed the library from a different CSV if wanted, or import one in-browser.
 
-The one thing to watch: `RfCh` has a DMR variant (`RfChDMR`, 25 bytes + colour
-codes and slot). `decodeRfCh()` assumes the non-DMR 25-byte layout. If a radio
-reports `support_dmr`, the record is longer and the decoder needs the variant —
-benlink switches on body length in `channel_settings_disc()`.
+**The one real trap:** `RfCh` has a DMR variant (`RfChDMR` — plain `RfCh` plus
+`tx_color:4`, `rx_color:4`, `slot:1`, `pad:7`). `decodeRfCh()` assumes the
+non-DMR 25-byte layout. If a radio reports `support_dmr` the record is longer
+and the decoder needs the variant; benlink switches on body length in
+`channel_settings_disc()`.
 
 ---
 
-## House rules for this project
+## 11. Things that have already bitten, so you do not repeat them
 
-- `vgc-programmer.html` is the only source file. `public/index.html` is
-  generated by the deploy script; never edit it.
-- `test-codec.mjs` extracts protocol code straight out of the HTML so it cannot
-  drift. Run it before every deploy.
-- Regenerate the built-in channel library with `node build-library.mjs --write`
-  after editing the master CSV.
-- Deploy is additive rsync, no `--delete`, dry run by default, and verifies
-  jasonhuber.com's `/llm`, `/track` and `/travels` afterwards.
-- Keep the page dependency-free and offline-capable — it is a field tool.
+- **`SET_REGION` waits forever.** It never replies. Fixed, but the same trap
+  exists for any other no-reply command.
+- **`sustav.dev/v1/prompt` 404s.** It is `api.sustav.dev`.
+- **The proxy falls back silently.** An unknown provider is not an error. Always
+  surface `source`.
+- **PHP's 30 s execution limit kills model calls** with a fatal, not an error
+  the browser can act on. `/check-list` calls `set_time_limit(120)`. A real call
+  takes 40–60 s.
+- **`curl_close()` is deprecated in PHP 8.5** and its notice will land in the
+  JSON body on a host with `display_errors` on. It is a no-op since 8.0; do not
+  reintroduce it.
+- **Greedy label placement must not reserve a label's own marker.** The first
+  bubble-map attempt placed **zero** site labels because every candidate box
+  collided with its own site's ring reservation.
+- **localStorage throws on `data:` URLs**, which is how the preview pane renders
+  local files. All storage access is wrapped in try/catch; keep it that way.
+- **The GMRS interstitials were wrong in the shipped library** — all 14 were
+  wide when they must be 12.5 kHz narrow, and ch 8–14 were at 8 W instead of
+  0.5 W. Found by the list-review feature on its first real use, fixed in the
+  master CSV. Note the model was only *partly* right: it also wanted low power
+  on ch 1–7, where 5 W is permitted — it had applied the FRS limit. **Findings
+  are advisory; check them.**
+
+---
+
+## 12. Honesty constraints
+
+These are commitments the page makes to its users. Do not quietly break them.
+
+- **Say what leaves the device.** The footer, the Start page and the guide now
+  state plainly that channels and groups stay local while the **coverage log —
+  including positions — is stored on the server** against the account. Earlier
+  copy claimed "nothing is uploaded"; that became false the moment sync
+  shipped, and was corrected. If you add another upload, update the copy in the
+  same commit.
+- **Never present a model's output as fact.** The review panel labels findings
+  as suggestions, never writes to the library, and names the provider that
+  actually answered.
+- **Flag what is unverified.** Panels covering untested protocol work say so on
+  the panel itself. Keep that habit — this is a tool that writes to hardware.
+- **Transmit only where licensed** is not boilerplate. The GMRS and satellite
+  entries have their own rules, and this is an amateur radio.

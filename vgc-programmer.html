@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>N7WGP · VR-N76 Programmer</title>
 <meta name="description" content="Program a VGC VR-N76 handheld radio over Bluetooth straight from the browser. Preloaded Phoenix-area channel library, group filtering, and radio-vs-library diffing. No install, no backend.">
-<!-- inline so the page makes zero external requests on any domain -->
+<!-- Everything is inlined: the page loads no asset from any other origin. The only network
+     calls it ever makes are to its own /api for sign-in, coverage sync and list review. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c6fd6'/%3E%3Cpath d='M16 25V12' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='8.5' r='2.5' fill='white'/%3E%3Cpath d='M10.4 24.6a8 8 0 0 1 0-11.3M21.6 13.3a8 8 0 0 1 0 11.3' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -276,9 +277,10 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   <div class="panel" id="pStart">
     <h2>Start here</h2>
     <p class="note" style="margin:0 0 12px">Everything on this page runs inside your browser and
-    talks straight to the radio over Bluetooth. Nothing is uploaded, there is no account, and it
-    keeps working with no signal — which is the point, since most of it is used in the field.
-    Pick what you came to do.</p>
+    talks straight to the radio over Bluetooth. Your channels, groups and CSV stay in this
+    browser; your coverage log syncs to your account so it survives a lost phone. Once you have
+    signed in, it keeps working with no signal — which is the point, since most of it is used in
+    the field. Pick what you came to do.</p>
     <div class="cards">
 
       <div class="card">
@@ -667,9 +669,13 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     browser will work. Firefox does not implement it either, on any platform. The channel
     library, the map and CSV import/export still work in those browsers; only the radio link
     is missing.</div>
-    <p>Nothing installs, nothing phones home, and the page works offline once loaded. Your
-    channel library, your group layout and your coverage log live in this browser's local
-    storage — clearing site data clears them, so export a CSV if you care about them.</p>
+    <p>Nothing installs, and once you have signed in the page works offline. Your <b>channel
+    library and group layout are local to this browser</b> — clearing site data clears them, so
+    export a CSV if you care about them. Your <b>coverage log is different</b>: it is held locally
+    <i>and</i> synced to your account on the server, positions included, so it survives a cleared
+    browser or a lost phone. It is visible only to you; nothing about it is shared or published.
+    If you would rather it never left the device, do not press Sync and do not end a session while
+    online — a finished session uploads itself.</p>
 
     <h3 id="g-connect">Connecting the radio</h3>
     <p>Do these in order. The second and fourth steps are the ones people skip, and both produce
@@ -935,7 +941,10 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   <a href="https://github.com/khusmann/benlink">benlink</a> (Apache-2.0), with group-name and
   SET_REGION-reply details from <a href="https://github.com/Ylianst/HTCommander">HTCommander</a>
   (Apache-2.0).
-  Runs entirely in your browser — nothing is uploaded, no data leaves this page.<br>
+  Radio control runs entirely in your browser — channels, groups and the CSV never leave
+  this page. Your <b>coverage log is stored on the server against your account</b> so it
+  follows you between devices; that includes the positions it records. Nothing else is
+  uploaded, and nothing is shared with anyone else.<br>
   Not affiliated with VGC / Vero Telecom. Writing bad values to a radio is your
   responsibility. Transmit only where you are licensed.
 </footer>
@@ -2793,7 +2802,8 @@ function renderCoverage(){
     (cov.rows.length >= COV_MAX
       ? `<b>The log is full at ${COV_MAX} rows</b> — the oldest are being dropped as new ones arrive. Export, then delete what you no longer need. `
       : "") +
-    `Kept in this browser only, and only while this tab stays in the foreground — a backgrounded ` +
+    `Held in this browser and synced to your account, and only recorded while this tab stays in ` +
+    `the foreground — a backgrounded ` +
     `mobile browser suspends Bluetooth and throttles GPS. Signal strength is the radio's own ` +
     `4-bit reading shown as a percentage; treat it as relative, not calibrated. ` +
     `<a href="#" data-go="guide" data-anchor="g-coverage">Full instructions and limits →</a>`;
