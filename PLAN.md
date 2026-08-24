@@ -20,6 +20,7 @@ Live at **<https://n7wgp.com>**. Source of truth is `vgc-programmer.html`
 | Live status strip (RSSI, TX/RX, battery, current group) | **built, never seen real data** |
 | Event push (status/channel/packet-in) | **built, never seen real data** |
 | `SET_REGION` group switching | **UNVERIFIED — the big open question** |
+| APRS/BSS settings page (`BssSettings`, 46/50-byte codec) | built, 4 offline round-trip assertions, **not yet run against real hardware** |
 
 ### The one thing blocking everything else
 
@@ -52,11 +53,15 @@ Spec says the VR-N76 is **6 groups × 32 = 192 channels**. The radio reported
 Ordered by value per unit of effort. Items 1–3 are fully decoded in benlink —
 no reverse engineering needed, just implementation.
 
-### 1. APRS / BSS settings page — **do this first**
+### 1. APRS / BSS settings page — **built 2026-08-24, needs a hardware pass**
 
 `READ_BSS_SETTINGS` (33) / `WRITE_BSS_SETTINGS` (34). Fully decoded in
-`benlink/protocol/command/bss_settings.py`. Highest payoff for the least work:
-set the callsign and beacon once from a keyboard instead of thumbing radio menus.
+`benlink/protocol/command/bss_settings.py`. Sets the callsign and beacon once
+from a keyboard instead of thumbing radio menus. In-app help panel explains
+APRS/BSS/KISS/TNC in plain language, cross-referenced against the radio's own
+menu tree (`Menu → General Settings → APRS Settings` / `Digital Mode`) per the
+official VR-N76 manual. **Next**: read from a real radio, confirm the field
+values match the phone app, then a write round-trip.
 
 `BSSSettings` bitfield, in order:
 

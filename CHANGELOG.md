@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-24 (later) — git repo, APRS/BSS settings page
+
+- Initialized git, pushed to **[github.com/jasonhuber/vgc-radio](https://github.com/jasonhuber/vgc-radio)** (public).
+- Built the **APRS/BSS settings page** (roadmap item 1): reads and writes
+  `BssSettings` (`READ_BSS_SETTINGS`/`WRITE_BSS_SETTINGS`, commands 33/34) —
+  callsign, SSID, symbol, APRS-vs-BSS format, beacon message, location-share
+  interval, PTT-release toggles, max-forward/TTL. 4 new offline round-trip
+  assertions (46-byte base + 50-byte ext), 76/76 passing.
+- Added an in-app glossary explaining **APRS, BSS, KISS and TNC** in plain
+  language, plus a callout mapping the two fields this protocol *hasn't*
+  decoded yet (digipeater `Path`, `Digital Channel`) to their real location in
+  the radio's own menu — sourced from the official VR-N76 manual PDF
+  (`Menu → General Settings → APRS Settings` / `Digital Mode`).
+
 ## 2026-08-24 — reorganised as 07-VGC, plan written
 
 - Renamed `07-VRN76-Control/` to **`07-VGC/`** and `vrn76.html` to

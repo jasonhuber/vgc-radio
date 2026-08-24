@@ -178,6 +178,82 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   </div>
 
   <div class="panel">
+    <h2>APRS / BSS settings</h2>
+    <details class="note" open>
+      <summary style="cursor:pointer;font-weight:650">What do APRS, BSS, KISS and TNC mean?</summary>
+      <div style="margin:8px 0 0;line-height:1.75">
+        <p><b>APRS</b> (Automatic Packet Reporting System) is the open ham-radio standard for
+        broadcasting your position and short text over the air — any APRS software, and sites
+        like <a href="https://aprs.fi" target="_blank" rel="noopener">aprs.fi</a>, can decode it.
+        Using it requires a <b>licensed callsign</b> (N7WGP qualifies).</p>
+        <p><b>BSS</b> is Vero Telecom's own packet protocol — same idea, no callsign check, but
+        only other Benshi-family radios and the VGC app understand it. It's the fallback for
+        anyone without a ham license.</p>
+        <p>The radio only ever transmits <b>one</b> of the two — set <b>Format</b> below to
+        whichever fits.</p>
+        <p><b>TNC</b> (Terminal Node Controller) is the packet modem — historically a separate box
+        between a radio and a computer, translating between radio audio and digital bytes. This
+        radio has one built in.</p>
+        <p><b>KISS</b> is a dead-simple framing protocol so a computer can talk to a TNC without
+        knowing anything radio-specific — it just gets raw packet bytes in and out. This app talks
+        to the radio's TNC the same way, over the same Bluetooth link already used for everything
+        else on this page (not a separate Bluetooth connection). Sending packets isn't built yet —
+        see <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a> item 2; receiving already shows up in the
+        <b>Protocol log</b> below as <code>packet in…</code>.</p>
+        <p><b>Callsign / SSID</b> — your callsign identifies the station; the SSID (0–15) is a
+        suffix (like the <code>-9</code> in <code>N7WGP-9</code>) used when one callsign runs
+        several devices at once, so they don't collide on the map.</p>
+        <p><b>Symbol</b> — the two-character code that picks the icon APRS software draws for you
+        (a car, a house, an HT, …). Leave it as whatever the radio ships with if unsure.</p>
+        <p><b>Share location</b> — turns GPS beaconing on/off and how often (in seconds) a position
+        report goes out.</p>
+        <p><b>PTT-release options</b> — what gets sent automatically the instant you let go of the
+        transmit button: your position, your ID text, and/or your BSS ID.</p>
+      </div>
+    </details>
+    <p class="note" style="margin-top:10px">
+      <b>Not covered by this panel:</b> the digipeater <b>Path</b> (e.g. <code>WIDE1-1</code>) and
+      which RF <b>channel</b> carries packet data live in radio commands this protocol hasn't been
+      reverse-engineered yet (<code>SET_APRS_PATH</code>/<code>GET_APRS_PATH</code> — see
+      <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a>). Set those from the radio's own screen or the VGC phone app:
+      <b>Menu → General Settings → APRS Settings → Path</b>, and
+      <b>Menu → General Settings → Digital Mode → Digital Channel</b>.
+    </p>
+    <div class="row" style="margin:12px 0 10px">
+      <button id="btnReadBss" disabled>Read from radio</button>
+      <button id="btnWriteBss" class="danger" disabled>Write to radio</button>
+      <span class="dim">Read first — write sends back every field, including ones not shown here.</span>
+    </div>
+    <div id="bssForm" class="grid hidden">
+      <div class="f"><label>Callsign (6 char)</label>
+        <input id="b_call" maxlength="6" placeholder="N7WGP" style="text-transform:uppercase"></div>
+      <div class="f"><label>SSID (0–15)</label><input id="b_ssid" type="number" min="0" max="15"></div>
+      <div class="f"><label>Symbol (2 char)</label><input id="b_sym" maxlength="2" placeholder="/k"></div>
+      <div class="f"><label>Format</label>
+        <select id="b_fmt"><option value="1">APRS (needs licensed callsign)</option>
+        <option value="0">BSS (Vero's own, no callsign needed)</option></select></div>
+      <div class="f"><label>Beacon message (18 char)</label><input id="b_msg" maxlength="18"></div>
+      <div class="f"><label>Share location</label>
+        <label class="row" style="gap:6px"><input id="b_share" type="checkbox" style="width:auto"> broadcast GPS position</label></div>
+      <div class="f"><label>Share interval (sec)</label><input id="b_interval" type="number" min="0" max="2550" step="10"></div>
+      <div class="f"><label>PTT-release sends</label>
+        <label class="row" style="gap:6px"><input id="b_pttloc" type="checkbox" style="width:auto"> location</label>
+        <label class="row" style="gap:6px"><input id="b_pttid" type="checkbox" style="width:auto"> ID text</label>
+        <label class="row" style="gap:6px"><input id="b_pttuid" type="checkbox" style="width:auto"> BSS ID</label></div>
+      <div class="f"><label>PTT-release ID text (12 char)</label><input id="b_pttidinfo" maxlength="12"></div>
+      <div class="f"><label>Send power/voltage</label>
+        <label class="row" style="gap:6px"><input id="b_pwrv" type="checkbox" style="width:auto"> include in beacon</label></div>
+      <div class="f"><label>Allow position check</label>
+        <label class="row" style="gap:6px"><input id="b_poscheck" type="checkbox" style="width:auto"> reply to check requests</label></div>
+      <div class="f"><label>Max forward hops (0–15)</label><input id="b_maxfwd" type="number" min="0" max="15"></div>
+      <div class="f"><label>Time to live (0–15)</label><input id="b_ttl" type="number" min="0" max="15"></div>
+    </div>
+    <p class="note" id="bssNote">Not yet round-tripped against real hardware — <b>Read from radio</b>
+    first, check the values look sane, then <b>Write to radio</b>. If a write fails, the protocol
+    log below will show the radio's actual error status.</p>
+  </div>
+
+  <div class="panel">
     <h2>Repeater map</h2>
     <div class="row" style="margin-bottom:10px">
       <button class="chip on" id="mapMetro">Metro (≤40 mi)</button>
@@ -441,6 +517,57 @@ function encodeRfCh(c, w){
   w.str(c.name||"", 10);
 }
 
+/* ---------- BssSettings: APRS/BSS config, 46 bytes (50 with the ext) ----------
+   Field order and widths per PLAN.md item 1, taken from benlink's
+   bss_settings.py. Ext adds bss_user_id_upper -- same "switch on body
+   length" trick as Status/StatusExt.                                    */
+const BSS_BYTES = 46, BSS_EXT_BYTES = 50;
+function decodeBssSettings(r, extended){
+  const s = {};
+  s.max_fwd_times = r.int(4);
+  s.time_to_live  = r.int(4);
+  s.ptt_release_send_location   = r.bool();
+  s.ptt_release_send_id_info    = r.bool();
+  s.ptt_release_send_bss_user_id = r.bool();
+  s.should_share_location = r.bool();
+  s.send_pwr_voltage      = r.bool();
+  s.packet_format          = r.int(1);            // 0 BSS, 1 APRS
+  s.allow_position_check  = r.bool();
+  r.int(1);                                        // pad
+  s.aprs_ssid = r.int(4);
+  r.int(4);                                        // pad
+  s.location_share_interval = r.int(8);             // x10 seconds
+  s.bss_user_id_lower = r.int(32);
+  s.ptt_release_id_info = r.str(12);
+  s.beacon_message      = r.str(18);
+  s.aprs_symbol         = r.str(2);
+  s.aprs_callsign       = r.str(6);
+  s.bss_user_id_upper = extended ? r.int(32) : 0;
+  s._extended = extended;
+  return s;
+}
+function encodeBssSettings(s, w){
+  w.int(s.max_fwd_times||0, 4);
+  w.int(s.time_to_live||0, 4);
+  w.bool(!!s.ptt_release_send_location);
+  w.bool(!!s.ptt_release_send_id_info);
+  w.bool(!!s.ptt_release_send_bss_user_id);
+  w.bool(!!s.should_share_location);
+  w.bool(!!s.send_pwr_voltage);
+  w.int(s.packet_format?1:0, 1);
+  w.bool(!!s.allow_position_check);
+  w.int(0,1);
+  w.int(s.aprs_ssid||0, 4);
+  w.int(0,4);
+  w.int(s.location_share_interval||0, 8);
+  w.int(s.bss_user_id_lower||0, 32);
+  w.str(s.ptt_release_id_info||"", 12);
+  w.str(s.beacon_message||"", 18);
+  w.str(s.aprs_symbol||"", 2);
+  w.str((s.aprs_callsign||"").toUpperCase(), 6);
+  if (s._extended) w.int(s.bss_user_id_upper||0, 32);
+}
+
 /* ---------- message framing ---------- */
 function buildMessage(command, bodyFn){
   const w = new BitW();
@@ -619,7 +746,7 @@ async function connect(showAll){
 }
 
 function setConnectedUI(on){
-  ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe"]
+  ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe","btnReadBss","btnWriteBss"]
     .forEach(id => document.getElementById(id).disabled = !on);
   document.getElementById("btnConnect").disabled = on;
   renderRows(); renderLayout();
@@ -889,6 +1016,75 @@ async function writeChannel(c){
   const st = m.r.int(8);
   if (st !== 0) throw new Error(`write ch ${c.channel_id}: ${REPLY_STATUS[st]||st}`);
   return m.r.int(8);
+}
+
+/* ---------- APRS / BSS settings panel ----------
+   READ_BSS_SETTINGS request body is a literal 2 (u8), like GET_DEV_INFO's
+   literal 3. WRITE_BSS_SETTINGS body is the bitfield with no request-side
+   prefix, mirroring WRITE_RF_CH. Fully decoded in benlink (unlike
+   SET_REGION), but never round-tripped against a real radio yet -- read
+   before you write so unedited fields survive unchanged.                */
+let bssSettings = null;
+async function readBssSettings(){
+  const m = await request(CMD.READ_BSS_SETTINGS, buildMessage(CMD.READ_BSS_SETTINGS, w => w.int(2,8)));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`APRS/BSS settings: ${REPLY_STATUS[st]||st}`);
+  if (m.r.remainingBits < BSS_BYTES*8)
+    throw new Error(`APRS/BSS settings: short reply (${m.r.remainingBits} bits) — BLE MTU too small?`);
+  bssSettings = decodeBssSettings(m.r, m.r.remainingBits >= BSS_EXT_BYTES*8);
+  renderBssForm();
+  log(`APRS/BSS settings read — callsign "${bssSettings.aprs_callsign}" ` +
+      `format ${bssSettings.packet_format ? "APRS" : "BSS"}`, "l-rx");
+  return bssSettings;
+}
+async function writeBssSettingsToRadio(){
+  if (!bssSettings) throw new Error("read the current settings from the radio first");
+  formToBss();
+  const m = await request(CMD.WRITE_BSS_SETTINGS, buildMessage(CMD.WRITE_BSS_SETTINGS, w => encodeBssSettings(bssSettings, w)));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`write APRS/BSS settings: ${REPLY_STATUS[st]||st}`);
+  log("APRS/BSS settings written to radio", "l-rx");
+}
+function renderBssForm(){
+  const wrap = document.getElementById("bssForm");
+  if (!bssSettings){ wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+  const v = (id,val)=>document.getElementById(id).value = val;
+  const c = (id,val)=>document.getElementById(id).checked = !!val;
+  v("b_call", bssSettings.aprs_callsign||"");
+  v("b_ssid", bssSettings.aprs_ssid||0);
+  v("b_sym", bssSettings.aprs_symbol||"");
+  v("b_fmt", bssSettings.packet_format?1:0);
+  v("b_msg", bssSettings.beacon_message||"");
+  c("b_share", bssSettings.should_share_location);
+  v("b_interval", (bssSettings.location_share_interval||0)*10);
+  c("b_pttloc", bssSettings.ptt_release_send_location);
+  c("b_pttid", bssSettings.ptt_release_send_id_info);
+  c("b_pttuid", bssSettings.ptt_release_send_bss_user_id);
+  v("b_pttidinfo", bssSettings.ptt_release_id_info||"");
+  v("b_maxfwd", bssSettings.max_fwd_times||0);
+  v("b_ttl", bssSettings.time_to_live||0);
+  c("b_pwrv", bssSettings.send_pwr_voltage);
+  c("b_poscheck", bssSettings.allow_position_check);
+}
+function formToBss(){
+  const v = id=>document.getElementById(id).value;
+  const c = id=>document.getElementById(id).checked;
+  bssSettings.aprs_callsign = v("b_call").trim().toUpperCase().slice(0,6);
+  bssSettings.aprs_ssid = Math.max(0, Math.min(15, parseInt(v("b_ssid"),10)||0));
+  bssSettings.aprs_symbol = v("b_sym").slice(0,2);
+  bssSettings.packet_format = parseInt(v("b_fmt"),10) ? 1 : 0;
+  bssSettings.beacon_message = v("b_msg").slice(0,18);
+  bssSettings.should_share_location = c("b_share");
+  bssSettings.location_share_interval = Math.max(0, Math.min(255, Math.round((parseInt(v("b_interval"),10)||0)/10)));
+  bssSettings.ptt_release_send_location = c("b_pttloc");
+  bssSettings.ptt_release_send_id_info = c("b_pttid");
+  bssSettings.ptt_release_send_bss_user_id = c("b_pttuid");
+  bssSettings.ptt_release_id_info = v("b_pttidinfo").slice(0,12);
+  bssSettings.max_fwd_times = Math.max(0, Math.min(15, parseInt(v("b_maxfwd"),10)||0));
+  bssSettings.time_to_live = Math.max(0, Math.min(15, parseInt(v("b_ttl"),10)||0));
+  bssSettings.send_pwr_voltage = c("b_pwrv");
+  bssSettings.allow_position_check = c("b_poscheck");
 }
 
 /* ==LIBRARY-START== generated by build-library.mjs -- do not hand-edit */
@@ -1774,6 +1970,11 @@ document.getElementById("btnConnectAny").onclick = () => connect(true).catch(onC
 document.getElementById("btnDisconnect").onclick = disconnect;
 document.getElementById("btnReadAll").onclick = () => readAll().catch(e=>log(e.message,"l-err"));
 document.getElementById("btnProbe").onclick = () => probeRegions().catch(e=>log(e.message,"l-err"));
+document.getElementById("btnReadBss").onclick = () => readBssSettings().catch(e=>log(e.message,"l-err"));
+document.getElementById("btnWriteBss").onclick = () => {
+  if (!confirm("Write these APRS/BSS settings to the radio?")) return;
+  writeBssSettingsToRadio().catch(e=>log(e.message,"l-err"));
+};
 
 document.getElementById("btnApply").onclick = () => {
   const c = editorToChannel();

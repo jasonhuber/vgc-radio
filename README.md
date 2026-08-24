@@ -37,7 +37,8 @@ Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 | CHIRP CSV import/export | built |
 | Live status: TX/RX/SQ/scan/GPS, RSSI, battery, current group | built, unverified |
 | Event push — reacts when you turn the knob | built, unverified |
-| APRS config, packet terminal, radio settings | **not built** — see PLAN.md |
+| APRS/BSS settings (callsign, beacon, share interval) | built, unverified on hardware |
+| Packet terminal (send), radio settings page | **not built** — see PLAN.md |
 | Audio / Bluetooth PTT | **impossible in a browser** — BLE cannot do Classic audio |
 
 ## Requirements

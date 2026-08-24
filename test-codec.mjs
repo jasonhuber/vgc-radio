@@ -12,7 +12,8 @@ if (start < 0 || end < 0) throw new Error("could not locate protocol section");
 const src = html.slice(start, end);
 const mod = await import("data:text/javascript," + encodeURIComponent(
   src + "\nexport { BitW, BitR, decodeRfCh, encodeRfCh, buildMessage, parseMessage," +
-        " subAudioDecode, subAudioEncode, toneToText, toneFromText, powerFromCsv, CMD };"
+        " subAudioDecode, subAudioEncode, toneToText, toneFromText, powerFromCsv, CMD," +
+        " decodeBssSettings, encodeBssSettings, BSS_BYTES, BSS_EXT_BYTES };"
 ));
 
 let pass = 0, fail = 0;
@@ -125,6 +126,36 @@ eq(conv("145.11", "-", "0.6", "DTCS", "88.5", "023"),
 // row 99: K0NL 449.425 -5 MHz, CTCSS 100.0
 eq(conv("449.425", "-", "5", "Tone", "100.0", "023"),
    { tx: 444.425, txt: { ctcss: 100 }, rxt: null }, "ch99 K0NL -> TX 444.425, CTCSS 100.0");
+
+console.log("\n— BssSettings (APRS/BSS) round-trip —");
+const bss = {
+  max_fwd_times: 3, time_to_live: 7,
+  ptt_release_send_location: true, ptt_release_send_id_info: false,
+  ptt_release_send_bss_user_id: true, should_share_location: true,
+  send_pwr_voltage: false, packet_format: 1, allow_position_check: true,
+  aprs_ssid: 9, location_share_interval: 12,   // -> 120 seconds
+  bss_user_id_lower: 305419896,
+  ptt_release_id_info: "N7WGP HT", beacon_message: "N7WGP Chandler AZ",
+  aprs_symbol: "/k", aprs_callsign: "n7wgp"
+};
+const wb = new mod.BitW();
+mod.encodeBssSettings(bss, wb);
+const bssBytes = wb.bytes();
+eq(bssBytes.length, mod.BSS_BYTES, "BssSettings encodes to 46 bytes (368 bits)");
+const bssBack = mod.decodeBssSettings(new mod.BitR(bssBytes), false);
+eq(bssBack.aprs_callsign, "N7WGP", "callsign upper-cased on encode");
+for (const k of Object.keys(bss)) {
+  if (k === "aprs_callsign") continue;   // case-folded above
+  eq(bssBack[k], bss[k], `BssSettings field ${k}`);
+}
+
+const bssExt = { ...bss, _extended: true, bss_user_id_upper: 2018915346 };
+const wbe = new mod.BitW();
+mod.encodeBssSettings(bssExt, wbe);
+const bssExtBytes = wbe.bytes();
+eq(bssExtBytes.length, mod.BSS_EXT_BYTES, "BssSettingsExt encodes to 50 bytes (400 bits)");
+const bssExtBack = mod.decodeBssSettings(new mod.BitR(bssExtBytes), true);
+eq(bssExtBack.bss_user_id_upper, bssExt.bss_user_id_upper, "BssSettingsExt field bss_user_id_upper");
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
