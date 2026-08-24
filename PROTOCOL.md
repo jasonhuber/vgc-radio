@@ -42,7 +42,12 @@ body          : remainder
 
 ## Commands (group BASIC = 2)
 
-Decoded bodies are marked ✓ — those can be implemented directly.
+Decoded bodies are marked ✓ — those can be implemented directly. Most of this
+table is benlink; a handful of rows (marked accordingly) come from
+[Ylianst/HTCommander](https://github.com/Ylianst/HTCommander)
+(`docs/blogs/radio-command-protocol.md`, Apache-2.0), a separate,
+hardware-confirmed reverse-engineering effort that has gone further than
+benlink on the region/group commands.
 
 | ID | Command | Body decoded |
 |---|---|---|
@@ -67,11 +72,12 @@ Decoded bodies are marked ✓ — those can be implemented directly.
 | 55 / 56 | `GET_PF` / `SET_PF` | ✓ |
 | 57 | `RX_DATA` | |
 | 58 | `WRITE_REGION_CH` | |
-| 60 | `SET_REGION` | **GUESS: u8 index** |
+| 59 | `WRITE_REGION_NAME` | ✓ (HTCommander) — see below |
+| 60 | `SET_REGION` | index still **GUESS: u8**; **confirmed no reply at all** (HTCommander) |
 | 67 / 68 | `SET_MSG` / `GET_MSG` | |
 | 70 | `SET_TIME` | |
-| 71 / 72 | `SET`/`GET_APRS_PATH` | |
-| 73 | `READ_REGION_NAME` | |
+| 71 / 72 | `SET`/`GET_APRS_PATH` | ✓ (HTCommander) — not yet implemented here, see PLAN.md |
+| 73 | `READ_REGION_NAME` | ✓ (HTCommander) — see below |
 
 `ReplyStatus` (u8): `0 SUCCESS · 1 NOT_SUPPORTED · 2 NOT_AUTHENTICATED ·
 3 INSUFFICIENT_RESOURCES · 4 AUTHENTICATING · 5 INVALID_PARAMETER ·
@@ -217,6 +223,30 @@ Transmit with `HT_SEND_DATA` (31); receive via the `DATA_RXD` event.
 ## `BSSSettings` — APRS config
 
 See `PLAN.md` item 1 for the full field table.
+
+## Region (group) names and `SET_REGION`
+
+Not from benlink — decoded by
+[Ylianst/HTCommander](https://github.com/Ylianst/HTCommander/blob/main/docs/blogs/radio-command-protocol.md)
+against real hardware (Apache-2.0). Region index is 0-based on the wire in
+all three commands, same as everywhere else in this protocol; this app's UI
+displays it as `index + 1` to match the radio's own screen (see `PLAN.md`).
+
+- **`SET_REGION` (60)** — request body `[region:u8]`. **Gets no reply at
+  all** — not even a status byte. Send it and move on; don't wait on a
+  reply or you'll eat the full request timeout every time. (This app did,
+  until 2026-08-24 — see `CHANGELOG.md`.) The index itself is still an
+  unconfirmed guess; `SET_REGION` not actually switching groups and
+  `SET_REGION` timing out because it was never going to reply are two
+  different failure modes that look identical from the log, which is worth
+  remembering if group switching still looks broken after the no-reply fix.
+- **`READ_REGION_NAME` (73)** — request body `[region:u8]`. Reply:
+  `reply_status:u8, region:u8, name` — name is UTF-8, null-padded to 10
+  bytes on the radio (same width as `RfCh.name`), consume whatever remains
+  of the frame rather than assuming exactly 10.
+- **`WRITE_REGION_NAME` (59)** — request body `[region:u8] + name padded to
+  10 bytes`. Unlike `SET_REGION`, this one replies normally with a
+  `reply_status:u8`.
 
 ## Audio — not reachable from a browser
 

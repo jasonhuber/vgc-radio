@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-08-24 (night) — group rename, and SET_REGION probably never worked right
+
+- **Added group (region) rename**, sourced from
+  [Ylianst/HTCommander](https://github.com/Ylianst/HTCommander)'s independent,
+  hardware-confirmed protocol decode (not benlink, which never got this far):
+  `READ_REGION_NAME` (73) / `WRITE_REGION_NAME` (59). "Read group names from
+  radio" and "Rename this group…" in the Radio layout panel. Not yet
+  round-tripped by this app specifically — read before you trust a write.
+- **Found and fixed a real bug in `setRegion()`**: the same source confirms
+  `SET_REGION` (60) gets **no reply at all**. This app was awaiting one like
+  every other command, meaning every group switch — including the very first
+  step of "Probe groups" — silently burned the full 5-second request timeout
+  and then errored. `setRegion()` is now fire-and-forget with a 150ms settle.
+  This may be the actual reason `SET_REGION` looked broken; the underlying
+  `u8` index guess is still unconfirmed and needs a fresh hardware test. See
+  `PLAN.md`.
+- Bonus find in the same source: `SET_APRS_PATH`/`GET_APRS_PATH` (71/72) are
+  decoded too — a plain UTF-8 string, not yet wired into the APRS/BSS panel.
+- Credited HTCommander (Apache-2.0) in the page footer alongside benlink.
+
 ## 2026-08-24 (evening) — group/channel numbers now match the radio's screen
 
 - **Fixed a display off-by-one**, reported after comparing the app to a real

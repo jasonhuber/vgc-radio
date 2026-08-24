@@ -19,16 +19,27 @@ Live at **<https://n7wgp.com>**. Source of truth is `vgc-programmer.html`
 | Repeater map, 80 sites geocoded | working |
 | Live status strip (RSSI, TX/RX, battery, current group) | **built, never seen real data** |
 | Event push (status/channel/packet-in) | **built, never seen real data** |
-| `SET_REGION` group switching | **UNVERIFIED — the big open question** |
+| `SET_REGION` group switching | index still unverified, but a real bug that broke every attempt is now fixed — see below |
 | APRS/BSS settings page (`BssSettings`, 46/50-byte codec) | built, 4 offline round-trip assertions, **not yet run against real hardware** |
+| Group (region) rename (`READ`/`WRITE_REGION_NAME`) | **built 2026-08-24**, sourced from HTCommander's hardware-confirmed decode, **not yet round-tripped by this app** |
 
 ### The one thing blocking everything else
 
-**Does `SET_REGION` (command 60) actually switch channel groups?**
+**Does `SET_REGION` (command 60) actually switch channel groups?** Still open
+— but a real bug in how this app called it just got fixed, and it may have
+been the whole reason this looked unverified.
 
-The command exists in the table, but benlink never decoded its body, so the
-single-byte group index in `setRegion()` is an informed guess. Until this is
-settled the radio is limited to the 32 slots of whatever group it is already on.
+**2026-08-24 finding:** `SET_REGION` gets **no reply at all** — confirmed by
+[Ylianst/HTCommander](https://github.com/Ylianst/HTCommander)'s independent,
+hardware-tested protocol notes (see `PROTOCOL.md`). This app's `setRegion()`
+previously did `await request(...)` like every other command, which sits on
+`radio.pending` waiting for a reply that was never coming — a silent 5-second
+timeout on *every single call*, including the very first one inside "Probe
+groups." That means every past test of group switching may have failed for a
+reason that has nothing to do with whether the `u8` index guess is correct.
+`setRegion()` is now fire-and-forget (`sendNoReply()`) with a 150ms settle
+before the next command. **This needs a fresh hardware test** — the index
+guess itself is still unconfirmed.
 
 Three ways to settle it, cheapest first:
 
@@ -40,7 +51,7 @@ Three ways to settle it, cheapest first:
    guess is wrong.
 3. If wrong, capture what the VGC phone app actually sends. `SET_REGION` may
    take a 16-bit index, or group switching may run through `WRITE_REGION_CH`
-   (58) / `READ_REGION_NAME` (73) instead.
+   (58) instead.
 
 Spec says the VR-N76 is **6 groups × 32 = 192 channels**. The radio reported
 `channel_count: 32` over the wire (correct) but a `region_count` of 0 or 1
@@ -133,15 +144,26 @@ Worth gating the dangerous ones behind a confirm — `ch_data_lock` and
 
 - **GPS position** — `SET_POSITION` (32); controller exposes `position()`.
 - **PF keys** — `GET_PF` (55) / `SET_PF` (56), decoded in `pf.py`.
-- **Group names** — `READ_REGION_NAME` (73), body not decoded.
+- ~~**Group names**~~ — **built 2026-08-24.** `READ_REGION_NAME` (73) /
+  `WRITE_REGION_NAME` (59), decoded by HTCommander (not benlink — see
+  `PROTOCOL.md`). "Read group names from radio" / "Rename this group…" in
+  the Radio layout panel. Independent of the `SET_REGION` question — both
+  take the region index directly.
+- **APRS path** — `SET_APRS_PATH` (71) / `GET_APRS_PATH` (72) are now
+  decoded too (HTCommander): a plain variable-length UTF-8 string, reply
+  `[status] + path`. Cheap to add — the BSS/APRS settings panel currently
+  tells users to set this from the radio's own menu because it wasn't
+  decoded when that panel was built; it now can be added to it directly.
 - Import the AZ frequency coordinator's 70cm PDF to refresh tones; the
   RepeaterBook data behind the current list was last updated 2021.
 
 ### Not decoded — reverse engineering required
 
-`SET_REGION` (60), FM broadcast control (`RADIO_*`, 24–28), text messages
-(`GET_MSG`/`SET_MSG`, 67/68), `SET_APRS_PATH` (71/72), advanced settings
-(29/30), `SET_VOLUME` (23), `SET_HT_ON_OFF` (21), `READ_FREQ_RANGE` (39).
+FM broadcast control (`RADIO_*`, 24–28), text messages (`GET_MSG`/`SET_MSG`,
+67/68), advanced settings (29/30), `SET_VOLUME` (23), `SET_HT_ON_OFF` (21),
+`READ_FREQ_RANGE` (39). `SET_REGION` (60) request/reply shape is now known
+(see above) — what's still unconfirmed is only whether the `u8` index means
+what this app assumes.
 
 ### Will never work in a browser
 

@@ -212,10 +212,12 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       </div>
     </details>
     <p class="note" style="margin-top:10px">
-      <b>Not covered by this panel:</b> the digipeater <b>Path</b> (e.g. <code>WIDE1-1</code>) and
-      which RF <b>channel</b> carries packet data live in radio commands this protocol hasn't been
-      reverse-engineered yet (<code>SET_APRS_PATH</code>/<code>GET_APRS_PATH</code> — see
-      <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a>). Set those from the radio's own screen or the VGC phone app:
+      <b>Not covered by this panel yet:</b> the digipeater <b>Path</b> (e.g. <code>WIDE1-1</code>,
+      via <code>SET_APRS_PATH</code>/<code>GET_APRS_PATH</code> — decoded, just not wired into this
+      UI yet) and which RF <b>channel</b> carries packet data (part of general radio settings, a
+      separate not-yet-built page — see
+      <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a>).
+      Set those from the radio's own screen or the VGC phone app for now:
       <b>Menu → General Settings → APRS Settings → Path</b>, and
       <b>Menu → General Settings → Digital Mode → Digital Channel</b>.
     </p>
@@ -271,6 +273,11 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   <div class="panel">
     <h2>Radio layout — what goes where</h2>
     <div class="row" id="grpTabs" style="margin-bottom:10px"></div>
+    <div class="row" style="margin-bottom:10px">
+      <button id="btnReadGroupNames" disabled>Read group names from radio</button>
+      <button id="btnRenameGroup" disabled>Rename this group…</button>
+      <span class="dim" id="grpNameCur"></span>
+    </div>
     <div class="row" style="margin-bottom:10px;font-size:12px;color:var(--muted)">
       <label class="row" style="gap:5px">groups
         <input id="grpCount" type="number" min="1" max="32" style="width:62px"></label>
@@ -289,6 +296,13 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <p class="note">Click a slot to target it, then press <b>+</b> on a channel below to place it
     there. A channel may appear in as many groups and slots as you like. Slot numbers are the
     radio's memory positions.</p>
+    <p class="note">Group names live on the radio itself (<code>READ_REGION_NAME</code> /
+    <code>WRITE_REGION_NAME</code>) — this reads and writes them for real, not just in the
+    browser. Byte layout isn't from benlink; it's a community decode confirmed against real
+    hardware (<a href="https://github.com/Ylianst/HTCommander/blob/main/docs/blogs/radio-command-protocol.md"
+    target="_blank" rel="noopener">Ylianst/HTCommander</a>, Apache-2.0), not yet round-tripped by
+    this app specifically — <b>Read group names</b> first to confirm it decodes sane text before
+    trusting a write.</p>
   </div>
 
   <div class="panel">
@@ -357,7 +371,9 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
 
 <footer id="foot" class="hidden">
   Speaks the Benshi BLE protocol reverse-engineered by Kyle Husmann in
-  <a href="https://github.com/khusmann/benlink">benlink</a> (MIT).
+  <a href="https://github.com/khusmann/benlink">benlink</a> (MIT), with group-name and
+  SET_REGION-reply details from <a href="https://github.com/Ylianst/HTCommander">HTCommander</a>
+  (Apache-2.0).
   Runs entirely in your browser — nothing is uploaded, no data leaves this page.<br>
   Not affiliated with VGC / Vero Telecom. Writing bad values to a radio is your
   responsibility. Transmit only where you are licensed.
@@ -385,7 +401,7 @@ const GROUP_BASIC = 2;
 const CMD = { READ_STATUS:5, REGISTER_NOTIFICATION:6, EVENT_NOTIFICATION:9,
               GET_DEV_INFO:4, READ_RF_CH:13, WRITE_RF_CH:14, GET_HT_STATUS:20,
               HT_SEND_DATA:31, READ_BSS_SETTINGS:33, WRITE_BSS_SETTINGS:34,
-              SET_REGION:60, READ_REGION_NAME:73 };
+              WRITE_REGION_NAME:59, SET_REGION:60, READ_REGION_NAME:73 };
 const EVENT = { HT_STATUS_CHANGED:1, DATA_RXD:2, HT_CH_CHANGED:5,
                 HT_SETTINGS_CHANGED:6, BSS_SETTINGS_CHANGED:11 };
 const POWER = { BATTERY_LEVEL:1, BATTERY_VOLTAGE:2, BATTERY_PERCENT:4 };
@@ -746,7 +762,8 @@ async function connect(showAll){
 }
 
 function setConnectedUI(on){
-  ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe","btnReadBss","btnWriteBss"]
+  ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe","btnReadBss","btnWriteBss",
+   "btnReadGroupNames","btnRenameGroup"]
     .forEach(id => document.getElementById(id).disabled = !on);
   document.getElementById("btnConnect").disabled = on;
   renderRows(); renderLayout();
@@ -833,6 +850,16 @@ function request(command, bytes, timeoutMs=5000){
   });
 }
 
+/* A handful of commands (SET_REGION confirmed, per community protocol notes --
+   see setRegion() below) get no application-level reply at all. Waiting on
+   radio.pending for those just burns the 5s timeout every time. This sends
+   the frame and resolves once the BLE write itself is acknowledged. */
+function sendNoReply(bytes){
+  if (!radio.connected) return Promise.reject(new Error("not connected"));
+  if (showRaw()) log("TX " + hex(bytes), "l-tx");
+  return radio.chWrite.writeValueWithResponse(bytes);
+}
+
 let devInfo = null;
 async function getDevInfo(){
   const m = await request(CMD.GET_DEV_INFO, buildMessage(CMD.GET_DEV_INFO, w => w.int(3,8)));
@@ -857,13 +884,60 @@ async function getDevInfo(){
 }
 
 /* SET_REGION is in the command table but benlink never decoded its body, so
-   the single-byte index below is an informed guess. Probe it read-only first:
-   a wrong body shape comes back as an error status, and reading cannot damage
-   anything. */
+   the single-byte index is still an informed guess -- Probe groups below is
+   how you settle that. What IS now confirmed (community protocol notes,
+   github.com/Ylianst/HTCommander, docs/blogs/radio-command-protocol.md,
+   Apache-2.0): this command gets NO application-level reply at all, unlike
+   almost everything else in this file. Waiting on one, as earlier versions
+   of this page did, meant every group switch burned a 5s timeout and then
+   errored -- which would masquerade as "group switching doesn't work"
+   regardless of whether the index guess was even right. */
 async function setRegion(n){
-  const m = await request(CMD.SET_REGION, buildMessage(CMD.SET_REGION, w => w.int(n,8)));
+  await sendNoReply(buildMessage(CMD.SET_REGION, w => w.int(n,8)));
+  /* No reply means no confirmation the switch landed before the next command
+     goes out -- a short settle avoids racing a READ_RF_CH against it. */
+  await new Promise(r => setTimeout(r, 150));
+}
+
+/* ---------- group (region) names ----------
+   READ_REGION_NAME (73) / WRITE_REGION_NAME (59): byte layout confirmed
+   against real hardware by the same source as the SET_REGION note above.
+   Read request is a single region-index byte; reply is
+   [status, index, UTF-8 name...] with the name filling whatever remains of
+   the frame (10 bytes null-padded on the radio side). Write payload is
+   [index] + name padded to 10 bytes; unlike SET_REGION this one DOES reply
+   with a normal status byte.
+   Independent of the SET_REGION question -- both commands take the region
+   index directly, no group switch required first.                        */
+const REGION_NAME_BYTES = 10;
+let regionNames = [];
+async function readRegionName(g){
+  const m = await request(CMD.READ_REGION_NAME, buildMessage(CMD.READ_REGION_NAME, w => w.int(g,8)));
   const st = m.r.int(8);
-  if (st !== 0) throw new Error(`set group ${n}: ${REPLY_STATUS[st]||st}`);
+  const idx = m.r.int(8);
+  if (st !== 0) throw new Error(`group ${g+1} name: ${REPLY_STATUS[st]||st}`);
+  const nbytes = Math.max(0, Math.floor(m.r.remainingBits/8));
+  const name = m.r.str(nbytes);
+  regionNames[idx] = name;
+  return name;
+}
+async function writeRegionName(g, name){
+  const m = await request(CMD.WRITE_REGION_NAME, buildMessage(CMD.WRITE_REGION_NAME, w => {
+    w.int(g,8); w.str(name||"", REGION_NAME_BYTES);
+  }));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`write group ${g+1} name: ${REPLY_STATUS[st]||st}`);
+  regionNames[g] = (name||"").slice(0, REGION_NAME_BYTES);
+}
+async function readAllRegionNames(){
+  const n = GROUPS();
+  let ok = 0;
+  for (let g = 0; g < n; g++){
+    try { await readRegionName(g); ok++; }
+    catch(e){ log(`group ${g+1} name: ${e.message}`, "l-err"); }
+  }
+  log(`read ${ok}/${n} group name(s)`, ok ? "l-rx" : "l-err");
+  renderGroupTabs();
 }
 
 async function probeRegions(){
@@ -1354,10 +1428,15 @@ function renderGroupTabs(){
     const used = groupSlots(g).filter(Boolean).length;
     const b = document.createElement("button");
     b.className = "chip" + (g === curGroup ? " on" : "");
-    b.textContent = `Group ${g+1} · ${used}/${SLOTS()}`;
+    b.textContent = (regionNames[g] ? `${regionNames[g]} (${g+1})` : `Group ${g+1}`) +
+      ` · ${used}/${SLOTS()}`;
     b.onclick = () => { curGroup = g; targetSlot = 0; renderLayout(); };
     el.appendChild(b);
   }
+  document.getElementById("grpNameCur").textContent =
+    regionNames[curGroup] != null
+      ? `group ${curGroup+1} name on radio: "${regionNames[curGroup]}"`
+      : `group ${curGroup+1} name: not read yet`;
 }
 
 function renderLayout(){
@@ -1974,6 +2053,16 @@ document.getElementById("btnReadBss").onclick = () => readBssSettings().catch(e=
 document.getElementById("btnWriteBss").onclick = () => {
   if (!confirm("Write these APRS/BSS settings to the radio?")) return;
   writeBssSettingsToRadio().catch(e=>log(e.message,"l-err"));
+};
+
+document.getElementById("btnReadGroupNames").onclick = () =>
+  readAllRegionNames().catch(e=>log(e.message,"l-err"));
+document.getElementById("btnRenameGroup").onclick = async () => {
+  const cur = regionNames[curGroup] || "";
+  const name = prompt(`Name for group ${curGroup+1} (10 char max):`, cur);
+  if (name == null) return;
+  try { await writeRegionName(curGroup, name); renderGroupTabs(); }
+  catch(e){ log(e.message, "l-err"); }
 };
 
 document.getElementById("btnApply").onclick = () => {
