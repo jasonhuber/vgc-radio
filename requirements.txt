@@ -1,0 +1,6 @@
+# Reference implementation only — the web app needs none of this.
+# Used to read the decoded Benshi protocol structures that PROTOCOL.md
+# summarises. Recreate with:
+#   python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+# then read venv/lib/python*/site-packages/benlink/protocol/command/
+benlink==0.1.1

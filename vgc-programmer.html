@@ -1,0 +1,1910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N7WGP · VR-N76 Programmer</title>
+<meta name="description" content="Program a VGC VR-N76 handheld radio over Bluetooth straight from the browser. Preloaded Phoenix-area channel library, group filtering, and radio-vs-library diffing. No install, no backend.">
+<!-- inline so the page makes zero external requests on any domain -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c6fd6'/%3E%3Cpath d='M16 25V12' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='8.5' r='2.5' fill='white'/%3E%3Cpath d='M10.4 24.6a8 8 0 0 1 0-11.3M21.6 13.3a8 8 0 0 1 0 11.3' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#14181d; --muted:#5c6672; --line:#d8dee6; --sunk:#eef1f5;
+  --accent:#1c6fd6; --ok:#0f7b4f; --warn:#a35b00; --err:#b3261e; --info:#5a3fb8;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1216; --panel:#161b22; --ink:#e6edf3; --muted:#8b959f; --line:#2a323c; --sunk:#0d1117;
+    --accent:#4d9bf5; --ok:#3fb950; --warn:#d29922; --err:#f85149; --info:#a78bfa;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--accent)}
+header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:15px;margin:0;font-weight:650}
+header .call{font:700 13px/1 var(--mono);color:var(--accent);letter-spacing:.04em}
+header .sub{font:400 12px/1 var(--mono);color:var(--muted)}
+#status{margin-left:auto;font:600 12px/1 var(--mono);padding:5px 10px;border-radius:999px;
+  border:1px solid var(--line);color:var(--muted)}
+#status.on{color:var(--ok);border-color:var(--ok)}
+#status.err{color:var(--err);border-color:var(--err)}
+main{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.panel h2{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:600 13px/1 system-ui,sans-serif;padding:8px 13px;border-radius:7px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.primary:hover:not(:disabled){opacity:.9;color:#fff}
+button.danger{color:var(--err);border-color:var(--err)}
+button.danger:hover:not(:disabled){background:var(--err);color:#fff}
+button:disabled{opacity:.38;cursor:not-allowed}
+button.chip{padding:6px 11px;border-radius:999px;font-size:12px}
+button.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+input,select{font:13px var(--mono);padding:6px 8px;border-radius:6px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;max-height:58vh}
+table{border-collapse:collapse;width:100%;font:12px/1.45 var(--mono);white-space:nowrap}
+th,td{padding:5px 9px;text-align:left;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--panel);font-weight:650;font-size:11px;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--muted);z-index:1}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+tbody tr.sel{background:color-mix(in srgb,var(--accent) 17%,transparent)}
+td.num{text-align:right}
+.dim{color:var(--muted)}
+.tag{font:600 10px/1 var(--mono);padding:2px 5px;border-radius:4px;border:1px solid var(--line)}
+.tag.dcs{color:var(--warn);border-color:var(--warn)}
+.tag.ctcss{color:var(--ok);border-color:var(--ok)}
+.st{font:600 10px/1 var(--mono);padding:3px 6px;border-radius:4px;border:1px solid currentColor}
+.st.match{color:var(--ok)} .st.diff{color:var(--warn)} .st.missing{color:var(--err)}
+.st.extra{color:var(--info)} .st.unread{color:var(--muted);border-color:var(--line)}
+.stats{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);color:var(--muted);margin:10px 0 0}
+.stats b{color:var(--ink);font-weight:650}
+#log{font:11px/1.55 var(--mono);background:var(--sunk);border:1px solid var(--line);
+  border-radius:8px;padding:10px;height:170px;overflow-y:auto;white-space:pre-wrap}
+.l-tx{color:var(--accent)} .l-rx{color:var(--ok)} .l-err{color:var(--err)} .l-inf{color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+kbd{font:11px var(--mono);border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--bg)}
+#gate{padding:18px;max-width:660px;margin:40px auto;background:var(--panel);
+  border:1px solid var(--err);border-radius:10px}
+#gate h2{color:var(--err);margin-top:0}
+#live{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:8px;background:var(--sunk);font:11px var(--mono)}
+#live .pill{padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted)}
+#live .pill.on{color:var(--ok);border-color:var(--ok)}
+#live .pill.tx{color:#fff;background:var(--err);border-color:var(--err)}
+#live .pill.rx{color:var(--ok);border-color:var(--ok)}
+#live .val{color:var(--ink);font-weight:650}
+#live .bar{width:74px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+#live .bar i{display:block;height:100%;background:var(--ok)}
+#err{margin-top:11px;padding:11px 13px;border-radius:8px;font-size:13px;line-height:1.65;
+  border:1px solid var(--err);color:var(--ink);
+  background:color-mix(in srgb,var(--err) 11%,transparent)}
+#err code{font:12px var(--mono);background:var(--sunk);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;user-select:all}
+.hidden{display:none!important}
+progress{width:180px;height:8px}
+#slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:6px}
+.slot{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;
+  border:1px solid var(--line);background:var(--bg);font:11px var(--mono);cursor:pointer;
+  min-height:34px}
+.slot:hover{border-color:var(--accent)}
+.slot.target{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.slot .n{color:var(--muted);min-width:18px;text-align:right;font-weight:650}
+.slot .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot.empty .nm{color:var(--muted);font-style:italic}
+.slot .x{color:var(--err);font-weight:700;padding:0 3px;border-radius:4px}
+.slot .x:hover{background:var(--err);color:#fff}
+.slot .dot{width:7px;height:7px;border-radius:50%;flex:none}
+td.plus{width:26px;text-align:center}
+td.plus button{padding:1px 7px;font:700 13px/1.3 var(--mono);border-radius:5px}
+#mapWrap{border:1px solid var(--line);border-radius:8px;background:var(--sunk);overflow:hidden}
+#map{display:block;width:100%;height:auto}
+#map .ring{fill:none;stroke:var(--line);stroke-dasharray:3 5}
+#map .ringlab{fill:var(--muted);font:600 11px var(--mono)}
+#map .site{cursor:pointer}
+#map .site circle{stroke:var(--panel);stroke-width:1.5}
+#map .site:hover circle{stroke:var(--ink);stroke-width:2}
+#map .site.on circle{stroke:var(--ink);stroke-width:2.5}
+#map .lab{fill:var(--ink);font:600 11px var(--mono);pointer-events:none;
+  paint-order:stroke;stroke:var(--sunk);stroke-width:3px;stroke-linejoin:round}
+#map .lab .sm,#map .lab.sm{fill:var(--muted);font-weight:400;font-size:10px}
+#map .home{fill:var(--err)}
+#map .homelab{fill:var(--err);font:700 12px var(--mono)}
+#map .camp{fill:var(--info)}
+#map .spoke{stroke:var(--line);stroke-width:1}
+footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted);max-width:1600px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VR-N76 Programmer</h1>
+  <span class="call">N7WGP</span>
+  <span class="sub">DM43bg · Chandler, AZ</span>
+  <span id="status">disconnected</span>
+</header>
+
+<div id="gate" class="hidden">
+  <h2>Web Bluetooth unavailable</h2>
+  <p>This page drives the radio over Bluetooth, which needs <b>Chrome, Edge, or another
+  Chromium browser</b> on <b>desktop or Android</b>, served over <b>https://</b>.</p>
+  <p><b>iPhone and iPad cannot work</b> — Safari and iOS Chrome do not implement
+  Web Bluetooth at all. Firefox does not either.</p>
+  <p class="note">Everything except the radio link still works elsewhere — the channel
+  library, groups, and CSV export are all local.</p>
+</div>
+
+<main id="app" class="hidden">
+
+  <div class="panel">
+    <h2>Radio link</h2>
+    <div class="row">
+      <button id="btnConnect" class="primary">Connect radio</button>
+      <button id="btnConnectAny">Show all Bluetooth devices…</button>
+      <button id="btnDisconnect" disabled>Disconnect</button>
+      <button id="btnReadAll" disabled>Read radio → compare</button>
+      <button id="btnProbe" disabled>Probe groups</button>
+      <progress id="prog" class="hidden" max="100" value="0"></progress>
+      <span id="devinfo" class="dim"></span>
+    </div>
+    <div id="live" class="hidden"></div>
+    <div id="err" class="hidden"></div>
+    <details class="note" open>
+      <summary style="cursor:pointer;font-weight:650">First connection — do these in order</summary>
+      <ol style="margin:8px 0 0;padding-left:20px;line-height:1.75">
+        <li>Quit the VGC phone app, and <b>turn Bluetooth off on the phone</b>. The radio serves
+            one controller at a time and phones silently reconnect.</li>
+        <li><b>Put the radio into Bluetooth pairing mode</b> from its own menu.</li>
+        <li>Press <b>Connect radio</b> and pick <code>VR-N76</code>.</li>
+        <li><b>Accept the system pairing dialog.</b> This is required — the radio drops any
+            link that is not bonded, which looks exactly like a failed connection. The browser
+            delegates bonding to the OS, so an OS pairing prompt <i>is</i> the browser pairing.
+            Only needed once.</li>
+      </ol>
+      <p style="margin:8px 0 0">If the picker comes up empty, use <b>Show all Bluetooth devices</b> —
+      BLE advertising names differ from the name the OS shows.</p>
+    </details>
+  </div>
+
+  <div class="panel">
+    <h2>Repeater map</h2>
+    <div class="row" style="margin-bottom:10px">
+      <button class="chip on" id="mapMetro">Metro (≤40 mi)</button>
+      <button class="chip" id="mapAll">All sites incl. rim country</button>
+      <span id="siteSel" class="dim" style="margin-left:6px"></span>
+      <button id="btnClearSite" class="hidden">Clear site filter</button>
+    </div>
+    <div id="mapWrap"><svg id="map" viewBox="0 0 1000 640" role="img"
+      aria-label="Map of repeater sites around the station"></svg></div>
+    <p class="note">Click a site to filter the channel list to it. Ring labels are miles from
+    the QTH. <b>Site positions are approximate</b> — named peaks and city/landmark centroids,
+    not surveyed antenna locations.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Radio layout — what goes where</h2>
+    <div class="row" id="grpTabs" style="margin-bottom:10px"></div>
+    <div class="row" style="margin-bottom:10px;font-size:12px;color:var(--muted)">
+      <label class="row" style="gap:5px">groups
+        <input id="grpCount" type="number" min="1" max="32" style="width:62px"></label>
+      <label class="row" style="gap:5px">slots each
+        <input id="slotCount" type="number" min="1" max="255" style="width:62px"></label>
+      <span id="capNote"></span>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <button id="btnFillGroup">Fill empty slots from shown list</button>
+      <button id="btnClearGroup">Clear this group</button>
+      <span style="flex:1"></span>
+      <button id="btnWriteLayout" class="danger" disabled>Write this group → radio</button>
+      <button id="btnWriteAllGroups" class="danger" disabled>Write every group → radio</button>
+    </div>
+    <div id="slots"></div>
+    <p class="note">Click a slot to target it, then press <b>+</b> on a channel below to place it
+    there. A channel may appear in as many groups and slots as you like. Slot numbers are the
+    radio's memory positions.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Channel library</h2>
+    <div class="row" id="groupChips"></div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="row" style="margin:12px 0 10px">
+      <button id="btnAddShown">Add all shown → current group</button>
+      <span style="flex:1"></span>
+      <button id="btnExport">Export CSV</button>
+      <input type="file" id="fileCsv" accept=".csv" class="hidden">
+      <button id="btnImport">Import CSV</button>
+      <button id="btnReset">Reset to built-in</button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th></th><th>#</th><th>Name</th><th>RX (MHz)</th><th>TX (MHz)</th><th>Shift</th>
+          <th>TX tone</th><th>RX tone</th><th>BW</th><th>Power</th><th>Site</th><th>Dist</th>
+          <th>Category</th><th>Planned</th><th>On radio</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="note" id="tableNote">Click a row to edit it. <b>Read radio → compare</b> fills the last column.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Channel editor</h2>
+    <div class="grid">
+      <div class="f"><label>Channel #</label><input id="e_id" type="number" min="0" max="255"></div>
+      <div class="f"><label>Name (10 char)</label><input id="e_name" maxlength="10"></div>
+      <div class="f"><label>RX freq MHz</label><input id="e_rx" placeholder="146.820"></div>
+      <div class="f"><label>TX freq MHz</label><input id="e_tx" placeholder="146.220"></div>
+      <div class="f"><label>TX tone</label><input id="e_txt" placeholder="88.5 · D023 · blank"></div>
+      <div class="f"><label>RX tone</label><input id="e_rxt" placeholder="blank = open"></div>
+      <div class="f"><label>Bandwidth</label><select id="e_bw"><option value="1">Wide (25k)</option><option value="0">Narrow (12.5k)</option></select></div>
+      <div class="f"><label>TX power</label><select id="e_pwr"><option value="high">High</option><option value="med">Medium</option><option value="low">Low</option></select></div>
+      <div class="f"><label>Scan</label><select id="e_scan"><option value="1">Include</option><option value="0">Skip</option></select></div>
+      <div class="f"><label>Group</label><select id="e_grp"></select></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="btnApply">Apply to library</button>
+      <button id="btnWriteOne" class="danger" disabled>Write this channel → radio</button>
+      <button id="btnReadOne" disabled>Read this channel from radio</button>
+    </div>
+    <p class="note">Tone syntax: <kbd>88.5</kbd> CTCSS · <kbd>D023</kbd> DCS · empty = none.
+    TX and RX are independent, so odd splits just work.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Protocol log</h2>
+    <div class="row" style="margin-bottom:8px">
+      <button id="btnClearLog">Clear</button>
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">
+        <input type="checkbox" id="chkRaw" style="width:auto"> show raw bytes
+      </label>
+    </div>
+    <div id="log"></div>
+  </div>
+
+</main>
+
+<footer id="foot" class="hidden">
+  Speaks the Benshi BLE protocol reverse-engineered by Kyle Husmann in
+  <a href="https://github.com/khusmann/benlink">benlink</a> (MIT).
+  Runs entirely in your browser — nothing is uploaded, no data leaves this page.<br>
+  Not affiliated with VGC / Vero Telecom. Writing bad values to a radio is your
+  responsibility. Transmit only where you are licensed.
+</footer>
+
+<script>
+"use strict";
+
+/* ============================================================
+   VGC VR-N76 (Benshi) BLE control — protocol implementation
+   Reverse-engineered mapping taken from khusmann/benlink (MIT).
+
+   Transport: GATT, custom service. Over BLE the radio takes RAW
+   messages -- unlike the RFCOMM path, there is NO GAIA framing.
+
+   Message = command_group:u16 | is_reply:1 | command:u15 | body
+   All fields are packed MSB-first and are NOT byte-aligned.
+   ============================================================ */
+
+const SVC   = "00001100-d102-11e1-9b23-00025b00a5a5";
+const CH_W  = "00001101-d102-11e1-9b23-00025b00a5a5"; // write
+const CH_I  = "00001102-d102-11e1-9b23-00025b00a5a5"; // indicate
+
+const GROUP_BASIC = 2;
+const CMD = { READ_STATUS:5, REGISTER_NOTIFICATION:6, EVENT_NOTIFICATION:9,
+              GET_DEV_INFO:4, READ_RF_CH:13, WRITE_RF_CH:14, GET_HT_STATUS:20,
+              HT_SEND_DATA:31, READ_BSS_SETTINGS:33, WRITE_BSS_SETTINGS:34,
+              SET_REGION:60, READ_REGION_NAME:73 };
+const EVENT = { HT_STATUS_CHANGED:1, DATA_RXD:2, HT_CH_CHANGED:5,
+                HT_SETTINGS_CHANGED:6, BSS_SETTINGS_CHANGED:11 };
+const POWER = { BATTERY_LEVEL:1, BATTERY_VOLTAGE:2, BATTERY_PERCENT:4 };
+const REPLY_STATUS = ["SUCCESS","NOT_SUPPORTED","NOT_AUTHENTICATED",
+  "INSUFFICIENT_RESOURCES","AUTHENTICATING","INVALID_PARAMETER",
+  "INCORRECT_STATE","IN_PROGRESS"];
+
+/* ---------- MSB-first bit codec ---------- */
+class BitW {
+  constructor(){ this.b = []; }
+  int(v, w){ v = Math.floor(Number(v)); for (let i=w-1;i>=0;i--) this.b.push(Math.floor(v/2**i)%2); }
+  bool(v){ this.b.push(v?1:0); }
+  str(s, bytes){
+    const out = new Uint8Array(bytes);
+    for (let i=0;i<Math.min(s.length,bytes);i++) out[i] = s.charCodeAt(i)&0xff;
+    for (const byte of out) this.int(byte,8);
+  }
+  bytes(){
+    if (this.b.length % 8) throw new Error("bit length not byte aligned: "+this.b.length);
+    const out = new Uint8Array(this.b.length/8);
+    this.b.forEach((bit,i)=>{ if(bit) out[i>>3] |= 1 << (7-(i&7)); });
+    return out;
+  }
+}
+class BitR {
+  constructor(u8){ this.u8 = u8; this.p = 0; }
+  int(w){ let v=0; for(let i=0;i<w;i++){ const bit=(this.u8[this.p>>3]>>(7-(this.p&7)))&1; v=v*2+bit; this.p++; } return v; }
+  bool(){ return this.int(1)===1; }
+  str(bytes){
+    let s="";
+    for(let i=0;i<bytes;i++){ const c=this.int(8); if(c) s+=String.fromCharCode(c); }
+    return s.replace(/\0+$/,"").trim();
+  }
+  get remainingBits(){ return this.u8.length*8 - this.p; }
+}
+
+/* ---------- sub-audio (CTCSS / DCS) ----------
+   raw 0 = none · raw < 6700 = DCS code · else CTCSS Hz*100      */
+function subAudioDecode(raw){
+  if (raw === 0) return null;
+  if (raw < 6700) return { dcs: raw };
+  return { ctcss: raw/100 };
+}
+function subAudioEncode(t){
+  if (t == null) return 0;
+  if (t.dcs != null){
+    if (t.dcs <= 0 || t.dcs >= 6700) throw new Error("bad DCS "+t.dcs);
+    return t.dcs;
+  }
+  const f = t.ctcss;
+  if (f < 67 || f > 254.1) throw new Error("bad CTCSS "+f);
+  return Math.round(f*100);
+}
+function toneToText(t){
+  if (!t) return "";
+  return t.dcs != null ? "D"+String(t.dcs).padStart(3,"0") : t.ctcss.toFixed(1);
+}
+function toneFromText(s){
+  s = (s||"").trim();
+  if (!s) return null;
+  if (/^d/i.test(s)) return { dcs: parseInt(s.slice(1),10) };
+  const f = parseFloat(s);
+  return isNaN(f) ? null : { ctcss: f };
+}
+function toneEq(a,b){
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.dcs != null || b.dcs != null) return a.dcs === b.dcs;
+  return Math.abs(a.ctcss - b.ctcss) < 0.05;
+}
+
+/* CHIRP's Power column is not standardised. CHIRP itself writes words
+   ("High"/"Mid"/"Low"), but the master list here carries wattage strings
+   like "8.0W" -- treating those as unrecognised would silently import the
+   whole list at LOW power, which is exactly the kind of thing you only
+   discover when a repeater won't key. Handle both forms.               */
+function powerFromCsv(s){
+  const t = (s||"").trim().toLowerCase();
+  if (!t) return "high";                       // unspecified -> full power
+  if (t.startsWith("high")) return "high";
+  if (t.startsWith("mid") || t.startsWith("med")) return "med";
+  if (t.startsWith("low")) return "low";
+  const w = parseFloat(t);                      // "8.0W", "5W", "0.5 W"
+  if (!isNaN(w)) return w >= 4 ? "high" : (w >= 1 ? "med" : "low");
+  return "high";
+}
+
+/* ---------- RfCh: exactly 200 bits / 25 bytes ---------- */
+const RFCH_BYTES = 25;
+function decodeRfCh(r){
+  const c = {};
+  c.channel_id   = r.int(8);
+  c.tx_mod       = r.int(2);
+  c.tx_freq      = r.int(30)/1e6;
+  c.rx_mod       = r.int(2);
+  c.rx_freq      = r.int(30)/1e6;
+  c.tx_sub_audio = subAudioDecode(r.int(16));
+  c.rx_sub_audio = subAudioDecode(r.int(16));
+  c.scan               = r.bool();
+  c.tx_at_max_power    = r.bool();
+  c.talk_around        = r.bool();
+  c.bandwidth          = r.int(1);
+  c.pre_de_emph_bypass = r.bool();
+  c.sign               = r.bool();
+  c.tx_at_med_power    = r.bool();
+  c.tx_disable         = r.bool();
+  c.fixed_freq         = r.bool();
+  c.fixed_bandwidth    = r.bool();
+  c.fixed_tx_power     = r.bool();
+  c.mute               = r.bool();
+  r.int(4);                       // pad
+  c.name = r.str(10);
+  return c;
+}
+function encodeRfCh(c, w){
+  w.int(c.channel_id, 8);
+  w.int(c.tx_mod|0, 2);
+  w.int(Math.round(c.tx_freq*1e6), 30);
+  w.int(c.rx_mod|0, 2);
+  w.int(Math.round(c.rx_freq*1e6), 30);
+  w.int(subAudioEncode(c.tx_sub_audio), 16);
+  w.int(subAudioEncode(c.rx_sub_audio), 16);
+  w.bool(c.scan); w.bool(c.tx_at_max_power); w.bool(c.talk_around);
+  w.int(c.bandwidth|0, 1);
+  w.bool(c.pre_de_emph_bypass); w.bool(c.sign); w.bool(c.tx_at_med_power);
+  w.bool(c.tx_disable); w.bool(c.fixed_freq); w.bool(c.fixed_bandwidth);
+  w.bool(c.fixed_tx_power); w.bool(c.mute);
+  w.int(0,4);
+  w.str(c.name||"", 10);
+}
+
+/* ---------- message framing ---------- */
+function buildMessage(command, bodyFn){
+  const w = new BitW();
+  w.int(GROUP_BASIC,16); w.bool(false); w.int(command,15);
+  if (bodyFn) bodyFn(w);
+  return w.bytes();
+}
+function parseMessage(u8){
+  const r = new BitR(u8);
+  const group = r.int(16), isReply = r.bool(), command = r.int(15);
+  return { group, isReply, command, r };
+}
+
+/* ============================================================
+   BLE transport with request/reply matching
+   ============================================================ */
+const radio = {
+  device:null, server:null, chWrite:null, chInd:null,
+  pending:new Map(),
+  get connected(){ return !!(this.device && this.device.gatt.connected); }
+};
+
+function log(msg, cls="l-inf"){
+  const el = document.getElementById("log");
+  const t = new Date().toTimeString().slice(0,8);
+  const div = document.createElement("div");
+  div.className = cls; div.textContent = `[${t}] ${msg}`;
+  el.appendChild(div); el.scrollTop = el.scrollHeight;
+}
+const hex = u8 => Array.from(u8).map(b=>b.toString(16).padStart(2,"0")).join(" ");
+const showRaw = () => document.getElementById("chkRaw").checked;
+function setStatus(text, cls=""){
+  const s = document.getElementById("status");
+  s.textContent = text; s.className = cls;
+}
+
+function showErr(html){
+  const el = document.getElementById("err");
+  el.innerHTML = html;
+  el.className = html ? "" : "hidden";
+}
+
+/* Turns Web Bluetooth's terse DOMExceptions into something actionable.
+   The API reports "user hit Cancel" and "picker was empty" as the SAME
+   NotFoundError, so the message text is the only way to tell them apart. */
+function explain(e){
+  const name = e.name || "Error", msg = e.message || String(e);
+
+  /* Chromium throws this when the runtime feature is off. navigator.bluetooth
+     still EXISTS, so a simple feature check passes and only requestDevice()
+     fails -- which is why this needs its own case. Brave ships it disabled. */
+  if (/globally disabled/i.test(msg)){
+    if (BRAVE) return ["Brave ships with Web Bluetooth turned off.",
+      "Open <code>brave://flags/#brave-web-bluetooth-api</code>, set it to <b>Enabled</b>, " +
+      "relaunch Brave, and reload this page."];
+    return ["Web Bluetooth is disabled in this browser.",
+      "Check these, in order:<br>" +
+      "1. <code>chrome://settings/content/bluetoothDevices</code> → “Sites can ask to connect to Bluetooth devices”.<br>" +
+      "2. <code>chrome://flags/#enable-web-bluetooth</code> → <b>Enabled</b>, then relaunch.<br>" +
+      "3. <code>chrome://policy</code> → if <code>DefaultWebBluetoothGuardSetting</code> is set to block, " +
+      "the browser is managed and the policy has to be changed.<br>" +
+      "If you are on Brave, it is <code>brave://flags/#brave-web-bluetooth-api</code>."];
+  }
+
+  if (name === "NotFoundError" && /cancel/i.test(msg))
+    return ["Picker cancelled — no device chosen.", "Press Connect again and pick the radio from the list."];
+  if (name === "NotFoundError")
+    return ["No matching Bluetooth device found.",
+      "The radio may advertise under a different name. Try <b>Show all Bluetooth devices</b>, " +
+      "and make sure the radio is <b>on</b>, <b>close by</b>, and <b>not connected to the VGC phone app</b>."];
+  if (name === "SecurityError")
+    return ["Blocked by the browser.", "Web Bluetooth needs https:// — reload the page from https://n7wgp.com."];
+  if (name === "NotSupportedError")
+    return ["This browser will not do Web Bluetooth.", "Use Chrome, Edge, or Brave on desktop or Android. iOS cannot do this at all."];
+  if (name === "NetworkError")
+    return ["Found the radio, but the connection did not complete.",
+      "In order:<br>" +
+      "1. <b>Forget the radio in macOS Bluetooth settings.</b> This page does its own pairing " +
+      "through the browser and does <i>not</i> need the OS pairing — and macOS holding it as a " +
+      "“Headset” is the most common cause of this exact failure.<br>" +
+      "2. <b>Power-cycle the radio</b>, then press Connect again while it is close by.<br>" +
+      "3. Make sure the VGC phone app is fully quit, not just backgrounded.<br>" +
+      "4. Just press Connect again — the first BLE attempt after a reboot often fails harmlessly."];
+  if (/GATT Server is disconnected|dropped the link/i.test(msg))
+    return ["The radio accepted the connection, then dropped it immediately.",
+      "The radio requires a <b>bonded</b> link and hangs up on anything unbonded.<br>" +
+      "1. <b>Put the radio into pairing mode</b> from its own menu, press Connect, and " +
+      "<b>accept the system pairing dialog.</b> That dialog is the browser pairing — it " +
+      "delegates bonding to the OS. Do not dismiss it.<br>" +
+      "2. <b>Turn Bluetooth off on your phone.</b> Quitting the VGC app is not enough; " +
+      "phones keep the bond and reconnect silently, and the radio serves one controller " +
+      "at a time.<br>" +
+      "3. Power-cycle the radio and retry within a few seconds of enabling pairing mode."];
+  if (/not found/i.test(msg))
+    return ["Connected, but the radio did not expose the expected service.",
+      "That device is probably not a Benshi-protocol radio (VR-N76 / UV-Pro / GA-5WB)."];
+  return [`${name}: ${msg}`, "Full detail is in the protocol log below."];
+}
+
+async function connect(showAll){
+  showErr("");
+  if (navigator.bluetooth.getAvailability){
+    const ok = await navigator.bluetooth.getAvailability();
+    if (!ok) throw Object.assign(new Error(
+      "Chrome reports no Bluetooth adapter. On macOS check System Settings → Privacy & Security → Bluetooth and enable Chrome, then restart Chrome."
+    ), { name:"NoAdapter" });
+  }
+
+  log(showAll ? "requesting device (all devices shown)…" : "requesting device (filtered)…");
+  radio.device = await navigator.bluetooth.requestDevice(
+    showAll
+      ? { acceptAllDevices:true, optionalServices:[SVC] }
+      : { filters:[{ services:[SVC] }, { namePrefix:"VR-" }, { namePrefix:"VGC" },
+                   { namePrefix:"UV-" }, { namePrefix:"GA-" }],
+          optionalServices:[SVC] }
+  );
+  log(`selected: "${radio.device.name || "(unnamed)"}"  id=${radio.device.id}`, "l-rx");
+  if (showAll && !/^(VR-|VGC|UV-|GA-)/i.test(radio.device.name || ""))
+    log(`note: "${radio.device.name}" does not look like a Benshi radio — if this is not the ` +
+        `VR-N76, press Connect again and pick a different device`, "l-err");
+  radio.device.addEventListener("gattserverdisconnected", onDropped);
+
+  /* The radio accepts the link and then drops it within a second if service
+     discovery starts immediately -- the classic "connected, then gone"
+     BLE pattern. So retry the WHOLE sequence (connect + settle + discover),
+     not just the connect, and give the link a moment before touching GATT. */
+  const ATTEMPTS = 5;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let svc = null;
+  connecting = true;
+  try {
+    for (let i = 1; ; i++){
+      try {
+        radio.server = await radio.device.gatt.connect();
+        await sleep(250 + 250*i);                  // let the link settle
+        if (!radio.device.gatt.connected)
+          throw Object.assign(new Error("radio dropped the link right after connecting"),
+                              { name:"NetworkError" });
+        svc = await radio.server.getPrimaryService(SVC);
+        log(`radio service found${i>1 ? ` on attempt ${i}` : ""}`, "l-rx");
+        break;
+      } catch(e){
+        const gone = !radio.device.gatt.connected;
+        if (i >= ATTEMPTS){
+          /* Last try: if we are still linked, report what the device DOES
+             offer -- that distinguishes "wrong radio" from "dropped us". */
+          if (!gone){
+            log(`service ${SVC} not found — enumerating what this device offers…`, "l-err");
+            try {
+              const all = await radio.server.getPrimaryServices();
+              if (!all.length) log("  device reports no primary services at all", "l-err");
+              all.forEach(x => log(`  service: ${x.uuid}`, "l-inf"));
+            } catch(e2){ log(`  could not enumerate services: ${e2.message}`, "l-err"); }
+          }
+          throw e;
+        }
+        log(`attempt ${i}: ${gone ? "radio dropped the link" : e.name} — retrying…`, "l-err");
+        try { radio.device.gatt.disconnect(); } catch(_){}
+        await sleep(600 * i);
+      }
+    }
+  } finally { connecting = false; }
+
+  radio.chWrite = await svc.getCharacteristic(CH_W);
+  radio.chInd   = await svc.getCharacteristic(CH_I);
+  await radio.chInd.startNotifications();
+  radio.chInd.addEventListener("characteristicvaluechanged", onNotify);
+
+  setStatus("connected", "on");
+  log("GATT up; indications subscribed", "l-rx");
+  setConnectedUI(true);
+  await getDevInfo();
+  for (const t of [EVENT.HT_STATUS_CHANGED, EVENT.HT_CH_CHANGED, EVENT.DATA_RXD])
+    await registerEvent(t);
+  startLive();
+}
+
+function setConnectedUI(on){
+  ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe"]
+    .forEach(id => document.getElementById(id).disabled = !on);
+  document.getElementById("btnConnect").disabled = on;
+  renderRows(); renderLayout();
+}
+
+let connecting = false;
+function onDropped(){
+  /* Drops during the connect/retry sequence are handled there; letting this
+     tear the UI down mid-retry just produces noise. */
+  if (connecting) return;
+  setStatus("disconnected");
+  log("radio link dropped", "l-err");
+  radio.pending.forEach(p => p.reject(new Error("disconnected")));
+  radio.pending.clear();
+  stopLive();
+  setConnectedUI(false);
+}
+async function disconnect(){
+  if (radio.device?.gatt.connected) radio.device.gatt.disconnect();
+  onDropped();
+}
+
+function onNotify(ev){
+  const u8 = new Uint8Array(ev.target.value.buffer);
+  if (showRaw()) log("RX " + hex(u8), "l-rx");
+  let m;
+  try { m = parseMessage(u8); }
+  catch(e){ log("undecodable frame: "+e.message, "l-err"); return; }
+  /* Unsolicited pushes from the radio -- these are not replies to anything,
+     so they must be handled before the pending-request lookup. */
+  if (m.command === CMD.EVENT_NOTIFICATION && !m.isReply){
+    try { handleEvent(m); } catch(e){ log(`event decode: ${e.message}`, "l-err"); }
+    return;
+  }
+  const p = radio.pending.get(m.command);
+  if (p){ radio.pending.delete(m.command); p.resolve(m); }
+}
+
+function handleEvent(m){
+  const type = m.r.int(8);
+  switch (type){
+    case EVENT.HT_STATUS_CHANGED: {
+      liveStatus = decodeStatus(m.r, m.r.remainingBits >= 32);
+      renderLive();
+      break;
+    }
+    case EVENT.HT_CH_CHANGED: {
+      const c = decodeRfCh(m.r);
+      log(`radio moved to channel ${c.channel_id}: ${c.name} ${c.rx_freq.toFixed(4)}`, "l-rx");
+      break;
+    }
+    case EVENT.DATA_RXD: {
+      const final = m.r.bool(), withCh = m.r.bool(), frag = m.r.int(6);
+      const nbytes = Math.floor((m.r.remainingBits - (withCh ? 8 : 0)) / 8);
+      const bytes = [];
+      for (let i=0;i<nbytes;i++) bytes.push(m.r.int(8));
+      const ch = withCh ? m.r.int(8) : null;
+      const txt = bytes.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
+      log(`packet in${ch!=null?` (ch ${ch})`:""} frag ${frag}${final?" final":""}: ${txt}`, "l-rx");
+      break;
+    }
+    case EVENT.HT_SETTINGS_CHANGED: log("radio settings changed", "l-inf"); break;
+    case EVENT.BSS_SETTINGS_CHANGED: log("APRS/BSS settings changed", "l-inf"); break;
+    default: log(`event ${type}`, "l-inf");
+  }
+}
+
+function request(command, bytes, timeoutMs=5000){
+  return new Promise((resolve,reject)=>{
+    if (!radio.connected) return reject(new Error("not connected"));
+    if (radio.pending.has(command)) return reject(new Error("command already in flight"));
+    const timer = setTimeout(()=>{
+      radio.pending.delete(command);
+      reject(new Error(`timeout waiting for reply to cmd ${command}`));
+    }, timeoutMs);
+    radio.pending.set(command, {
+      resolve:v=>{ clearTimeout(timer); resolve(v); },
+      reject:e=>{ clearTimeout(timer); reject(e); }
+    });
+    if (showRaw()) log("TX " + hex(bytes), "l-tx");
+    radio.chWrite.writeValueWithResponse(bytes).catch(e=>{
+      clearTimeout(timer); radio.pending.delete(command); reject(e);
+    });
+  });
+}
+
+let devInfo = null;
+async function getDevInfo(){
+  const m = await request(CMD.GET_DEV_INFO, buildMessage(CMD.GET_DEV_INFO, w => w.int(3,8)));
+  const st = m.r.int(8);
+  if (st !== 0){ log("device info failed: "+REPLY_STATUS[st], "l-err"); return; }
+  const r = m.r;
+  devInfo = {
+    vendor_id:r.int(8), product_id:r.int(16), hw_ver:r.int(8), soft_ver:r.int(16),
+    support_radio:r.bool(), support_medium_power:r.bool(), fixed_loc_speaker_vol:r.bool(),
+    not_support_soft_power_ctrl:r.bool(), have_no_speaker:r.bool(), have_hm_speaker:r.bool(),
+    region_count:r.int(6), support_noaa:r.bool(), gmrs:r.bool(),
+    support_vfo:r.bool(), support_dmr:r.bool(),
+    channel_count:r.int(8), freq_range_count:r.int(4)
+  };
+  const total = devInfo.channel_count * Math.max(1, devInfo.region_count);
+  document.getElementById("devinfo").textContent =
+    `fw ${devInfo.soft_ver} · ${devInfo.region_count} groups × ${devInfo.channel_count} ch = ${total} total` +
+    (devInfo.support_dmr ? " · DMR" : "") + (devInfo.gmrs ? " · GMRS" : "");
+  log(`device info OK — ${devInfo.region_count} groups × ${devInfo.channel_count} channels ` +
+      `(${total} total), fw ${devInfo.soft_ver}`, "l-rx");
+  renderRows(); renderLayout();
+}
+
+/* SET_REGION is in the command table but benlink never decoded its body, so
+   the single-byte index below is an informed guess. Probe it read-only first:
+   a wrong body shape comes back as an error status, and reading cannot damage
+   anything. */
+async function setRegion(n){
+  const m = await request(CMD.SET_REGION, buildMessage(CMD.SET_REGION, w => w.int(n,8)));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`set group ${n}: ${REPLY_STATUS[st]||st}`);
+}
+
+async function probeRegions(){
+  if (!devInfo){ log("read device info first", "l-err"); return; }
+  const n = Math.max(1, devInfo.region_count);
+  log(`probing ${n} groups — read-only, nothing is written`, "l-inf");
+  const found = [];
+  for (let g = 0; g < n; g++){
+    try {
+      await setRegion(g);
+      const c0 = await readChannel(0);
+      const c1 = await readChannel(1).catch(()=>null);
+      found.push({ g, c0, c1 });
+      log(`  group ${g}: ch0 = ${c0.name || "(empty)"} ${c0.rx_freq ? c0.rx_freq.toFixed(4) : "—"}` +
+          (c1 ? ` · ch1 = ${c1.name || "(empty)"} ${c1.rx_freq ? c1.rx_freq.toFixed(4) : "—"}` : ""), "l-rx");
+    } catch(e){
+      log(`  group ${g}: ${e.message}`, "l-err");
+      break;
+    }
+  }
+  const distinct = new Set(found.map(f => `${f.c0.name}|${f.c0.rx_freq}`)).size;
+  if (found.length > 1 && distinct > 1)
+    log(`groups WORK — ${found.length} readable, ${distinct} with distinct contents. ` +
+        `Total capacity ${found.length * devInfo.channel_count} channels.`, "l-rx");
+  else if (found.length > 1)
+    log(`${found.length} groups accepted the command but all returned identical channel 0 — ` +
+        `either they are all empty, or SET_REGION does not work the way this assumes.`, "l-err");
+  try { await setRegion(0); log("restored to group 0"); } catch(e){}
+  regionsProbed = found.length;
+  renderRows();
+}
+let regionsProbed = 0;
+
+/* ---------- live status ----------
+   Status is 16 bits; StatusExt adds RSSI, current region and the upper
+   channel bits for 32. Which one arrives depends on firmware, so switch
+   on the body length rather than assuming.                              */
+function decodeStatus(r, extended){
+  const s = {};
+  s.power_on   = r.bool();
+  s.in_tx      = r.bool();
+  s.sq_open    = r.bool();
+  s.in_rx      = r.bool();
+  s.dual       = r.int(2);          // 0 off, 1 A, 2 B
+  s.scanning   = r.bool();
+  s.fm_radio   = r.bool();
+  s.ch_lower   = r.int(4);
+  s.gps_locked = r.bool();
+  s.hfp        = r.bool();
+  s.aoc        = r.bool();
+  r.int(1);
+  if (extended){
+    s.rssi      = r.int(4) * (100/15);
+    s.region    = r.int(6);
+    s.ch_upper  = r.int(4);
+    r.int(2);
+    s.channel   = (s.ch_upper << 4) | s.ch_lower;
+  } else {
+    s.channel   = s.ch_lower;
+  }
+  return s;
+}
+
+let liveStatus = null, liveBattery = null, statusTimer = null;
+
+async function getHtStatus(){
+  const m = await request(CMD.GET_HT_STATUS, buildMessage(CMD.GET_HT_STATUS));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`status: ${REPLY_STATUS[st]||st}`);
+  const bits = m.r.remainingBits;
+  liveStatus = decodeStatus(m.r, bits >= 32);
+  renderLive();
+  return liveStatus;
+}
+
+async function getBattery(){
+  try {
+    let m = await request(CMD.READ_STATUS, buildMessage(CMD.READ_STATUS, w => w.int(POWER.BATTERY_PERCENT,16)));
+    let st = m.r.int(8);
+    if (st === 0 && m.r.int(16) === POWER.BATTERY_PERCENT){
+      liveBattery = { pct: m.r.int(8) };
+    }
+    m = await request(CMD.READ_STATUS, buildMessage(CMD.READ_STATUS, w => w.int(POWER.BATTERY_VOLTAGE,16)));
+    st = m.r.int(8);
+    if (st === 0 && m.r.int(16) === POWER.BATTERY_VOLTAGE){
+      liveBattery = Object.assign(liveBattery||{}, { v: m.r.int(16)/1000 });
+    }
+  } catch(e){ /* battery is a nicety; never let it break the session */ }
+  renderLive();
+}
+
+function renderLive(){
+  const el = document.getElementById("live");
+  if (!liveStatus && !liveBattery){ el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  const s = liveStatus || {};
+  const pill = (label, on, cls="on") => `<span class="pill ${on ? cls : ""}">${label}</span>`;
+  const rssi = s.rssi != null ? Math.round(s.rssi) : null;
+  el.innerHTML =
+    pill(s.in_tx ? "TX" : "TX", s.in_tx, "tx") +
+    pill("RX", s.in_rx, "rx") +
+    pill("SQ", s.sq_open) +
+    pill("SCAN", s.scanning) +
+    pill("GPS", s.gps_locked) +
+    (s.fm_radio ? pill("FM", true) : "") +
+    (rssi != null
+      ? `<span>S <span class="bar"><i style="width:${rssi}%"></i></span> <span class="val">${rssi}%</span></span>`
+      : "") +
+    (s.channel != null ? `<span>ch <span class="val">${s.channel}</span></span>` : "") +
+    (s.region != null ? `<span>group <span class="val">${s.region}</span></span>` : "") +
+    (liveBattery
+      ? `<span>batt <span class="val">${liveBattery.pct != null ? liveBattery.pct+"%" : ""}` +
+        `${liveBattery.v != null ? " "+liveBattery.v.toFixed(2)+"V" : ""}</span></span>`
+      : "");
+}
+
+function startLive(){
+  stopLive();
+  statusTimer = setInterval(() => {
+    if (!radio.connected) return;
+    getHtStatus().catch(()=>{});
+  }, 4000);
+  getHtStatus().catch(e=>log(`status unavailable: ${e.message}`, "l-err"));
+  getBattery();
+}
+function stopLive(){
+  if (statusTimer){ clearInterval(statusTimer); statusTimer = null; }
+  liveStatus = null; liveBattery = null; renderLive();
+}
+
+/* one-way: the radio starts pushing these without a reply */
+async function registerEvent(type){
+  try {
+    if (showRaw()) log(`registering for event ${type}`, "l-tx");
+    await radio.chWrite.writeValueWithResponse(
+      buildMessage(CMD.REGISTER_NOTIFICATION, w => w.int(type,8)));
+  } catch(e){ log(`could not register event ${type}: ${e.message}`, "l-err"); }
+}
+
+async function readChannel(id){
+  const m = await request(CMD.READ_RF_CH, buildMessage(CMD.READ_RF_CH, w => w.int(id,8)));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`ch ${id}: ${REPLY_STATUS[st]||st}`);
+  if (m.r.remainingBits < RFCH_BYTES*8)
+    throw new Error(`ch ${id}: short reply (${m.r.remainingBits} bits) — BLE MTU too small?`);
+  return decodeRfCh(m.r);
+}
+async function writeChannel(c){
+  const m = await request(CMD.WRITE_RF_CH, buildMessage(CMD.WRITE_RF_CH, w => encodeRfCh(c, w)));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`write ch ${c.channel_id}: ${REPLY_STATUS[st]||st}`);
+  return m.r.int(8);
+}
+
+/* ==LIBRARY-START== generated by build-library.mjs -- do not hand-edit */
+const LIB_GROUPS = {"simplex":"Simplex","metro":"Phoenix Metro","travel":"Rim Country (travel)","gmrs":"GMRS / FRS","sat":"Satellite"};
+const LIBRARY = [
+  {i:0,n:"2m Natl",r:146.52,g:"simplex"},
+  {i:1,n:"2m Simp",r:146.4,g:"simplex"},
+  {i:2,n:"W7NAZ",r:447.475,t:442.475,a:{c:88.5},g:"travel",k:"Forest Lakes",y:34.4658,x:-110.8656,m:"Payson, Forest Lakes [PL 88.5 confirmed 2026-08-17] [TRAVEL - 75-110mi from home]"},
+  {i:3,n:"K7AWW",r:145.11,t:144.51,a:{d:23},b:{d:23},g:"travel",k:"Young",y:34.105,x:-110.937,m:"Young, Moon Drive [DCS 023 per RepeaterBook 2026-08-17] [TRAVEL - 75-110mi from home]"},
+  {i:4,n:"W7RIM",r:146.8,t:146.2,a:{c:162.2},g:"travel",k:"Overgaard",y:34.413,x:-110.554,m:"Overgaard [TRAVEL - 75-110mi from home]"},
+  {i:5,n:"N7QVU",r:446.6,t:441.6,a:{c:100},g:"travel",k:"Overgaard",y:34.413,x:-110.554,m:"Overgaard [TRAVEL - 75-110mi from home]"},
+  {i:6,n:"W7MOT",r:442.975,t:447.975,a:{c:100},g:"travel",k:"Payson",y:34.231,x:-111.347,m:"Payson [TRAVEL - 75-110mi from home]"},
+  {i:7,n:"2m Simp",r:146.54,g:"simplex"},
+  {i:8,n:"2m Simp",r:146.56,g:"simplex"},
+  {i:9,n:"2m Simp",r:146.58,g:"simplex"},
+  {i:10,n:"2m Simp",r:146.6,g:"simplex"},
+  {i:11,n:"2m Simp",r:147.4,g:"simplex"},
+  {i:12,n:"2m Simp",r:147.42,g:"simplex"},
+  {i:13,n:"2m Simp",r:147.44,g:"simplex"},
+  {i:14,n:"2m Simp",r:147.46,g:"simplex"},
+  {i:15,n:"2m Simp",r:147.48,g:"simplex"},
+  {i:16,n:"2m Simp",r:147.5,g:"simplex"},
+  {i:17,n:"2m Simp",r:147.52,g:"simplex"},
+  {i:18,n:"2m Simp",r:147.54,g:"simplex"},
+  {i:19,n:"2m Simp",r:147.56,g:"simplex"},
+  {i:20,n:"2m Simp",r:147.58,g:"simplex"},
+  {i:21,n:"70cm Na",r:446,g:"simplex"},
+  {i:22,n:"70cm Si",r:440.925,g:"simplex"},
+  {i:23,n:"70cm Si",r:441.025,g:"simplex"},
+  {i:24,n:"70cm Si",r:446.025,g:"simplex"},
+  {i:25,n:"70cm Si",r:446.05,g:"simplex"},
+  {i:26,n:"70cm Si",r:446.5,g:"simplex"},
+  {i:27,n:"WY7H Ma",r:145.21,t:144.61,a:{c:162.2},g:"metro",k:"CAC Maricopa",y:33.056,x:-112.04,m:"Maricopa, Central AZ College - Maricopa Campus"},
+  {i:28,n:"WA2DFI",r:145.27,t:144.67,a:{c:162.2},g:"metro",k:"Tempe",y:33.4255,x:-111.94,m:"Tempe"},
+  {i:29,n:"W7TBC P",r:145.33,t:144.73,a:{c:162.2},g:"metro",k:"HonorHealth Deer Valley",y:33.68,x:-112.11,m:"Phoenix, Honor Health - Deer Valley"},
+  {i:30,n:"WW7CPU",r:145.45,t:144.85,a:{c:162.2},g:"metro",k:"Chandler",y:33.3062,x:-111.8413,m:"Chandler"},
+  {i:32,n:"W7ARA P",r:146.64,t:146.04,a:{c:162.2},g:"metro",k:"Chase Tower",y:33.4484,x:-112.074,m:"Phoenix, Chase Tower"},
+  {i:33,n:"WB7TUJ",r:146.66,t:146.06,a:{c:162.2},g:"metro",k:"Usery Pass",y:33.4736,x:-111.6,m:"Mesa, Usery Pass"},
+  {i:34,n:"W7TBC P",r:146.7,t:146.1,a:{c:162.2},g:"metro",k:"HonorHealth Dunlap",y:33.567,x:-112.074,m:"Phoenix, Honor Health Hospital -Dunlap & Central"},
+  {i:35,n:"K7DAD M",r:146.72,t:146.12,a:{c:100},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
+  {i:36,n:"W7ARA S",r:146.76,t:146.16,a:{c:162.2},g:"metro",k:"Scottsdale Airport",y:33.6229,x:-111.9105,m:"Scottsdale, Airport"},
+  {i:37,n:"KC7KF M",r:146.78,t:146.18,a:{c:100},g:"metro",k:"Maricopa",y:33.0581,x:-112.0476,m:"Maricopa"},
+  {i:38,n:"W7ARA M",r:146.86,t:146.26,a:{c:162.2},g:"metro",k:"Usery Pass",y:33.4736,x:-111.6,m:"Mesa, Usery Pass"},
+  {i:39,n:"K7TMP T",r:146.98,t:146.38,a:{c:100},g:"metro",k:"Bell Butte",y:33.425,x:-111.96,m:"Tempe, Bell Butte"},
+  {i:40,n:"W7BSA M",r:147.02,t:147.62,a:{c:162.2},g:"metro",k:"Usery Pass",y:33.4736,x:-111.6,m:"Mesa, Usery Pass"},
+  {i:41,n:"W7UXZ P",r:147.06,t:147.66,a:{c:162.2},g:"metro",k:"Phoenix",y:33.4484,x:-112.074,m:"Phoenix"},
+  {i:42,n:"KG7UN S",r:147.08,t:147.68,a:{c:162.2},g:"metro",k:"Thompson Peak",y:33.6553,x:-111.8267,m:"Scottsdale, Thompson Peak"},
+  {i:43,n:"WB7TJD",r:147.12,t:147.72,a:{c:162.2},g:"metro",k:"Usery Mountain",y:33.47,x:-111.61,m:"Mesa, Usery Mountain"},
+  {i:44,n:"W7ARA P",r:147.24,t:147.84,a:{c:162.2},g:"metro",k:"Shaw Butte",y:33.5936,x:-112.085,m:"Phoenix, Shaw Butte"},
+  {i:45,n:"K7MRG P",r:147.28,t:147.88,a:{c:162.2},g:"metro",k:"Phoenix",y:33.4484,x:-112.074,m:"Phoenix"},
+  {i:46,n:"K5VT Ph",r:147.32,t:147.92,a:{c:123},g:"metro",k:"Brown Mountain",y:33.35,x:-112.14,m:"Phoenix, Brown Mountain"},
+  {i:47,n:"W7MOT S",r:147.34,t:147.94,a:{c:162.2},g:"metro",k:"Hayden Rd",y:33.5,x:-111.907,m:"Scottsdale, Hayden Gd Site"},
+  {i:48,n:"W7UF Sc",r:440,t:445,a:{c:100},g:"metro",k:"HonorHealth Shea",y:33.581,x:-111.92,m:"Scottsdale, HonorHealth Scottsdale Shea Medical Center"},
+  {i:49,n:"KG7SWK",r:440.375,t:445.375,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:50,n:"K7DMK M",r:440.4,t:445.4,a:{c:123},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
+  {i:51,n:"N7OKN M",r:440.675,t:445.675,a:{c:107.2},g:"metro",k:"Dobson & University",y:33.422,x:-111.876,m:"Mesa, Dobson and University Dr."},
+  {i:54,n:"W0NWA S",r:441.1,t:446.1,a:{c:103.5},g:"metro",k:"Pinnacle Peak",y:33.72,x:-111.86,m:"Scottsdale, Pinnacle Peak"},
+  {i:55,n:"KB7CGA",r:441.2,t:446.2,a:{c:77},g:"metro",k:"Phoenix",y:33.4484,x:-112.074,m:"Phoenix"},
+  {i:56,n:"W7ARA S",r:441.625,t:446.625,a:{c:100},g:"metro",k:"Scottsdale Airport",y:33.6229,x:-111.9105,m:"Scottsdale, Airport"},
+  {i:57,n:"WV7HS Y",r:441.775,t:446.775,a:{c:100},g:"metro",k:"Youngtown",y:33.5906,x:-112.303,m:"Youngtown, West Valley Ham Shack"},
+  {i:58,n:"W7MOT S",r:442.025,t:447.025,a:{c:100},g:"metro",k:"Hayden Rd",y:33.5,x:-111.907,m:"Scottsdale, Hayden Gd Site"},
+  {i:59,n:"W7MOT P",r:442.05,t:447.05,a:{c:100},g:"metro",k:"Papago Park",y:33.455,x:-111.95,m:"Phoenix, Papago Park"},
+  {i:60,n:"N7AUW P",r:442.125,t:447.125,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:61,n:"K7PNX P",r:442.2,t:447.2,a:{c:136.5},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:62,n:"K7TMP T",r:442.375,t:447.375,a:{c:100},g:"metro",k:"JGM Water Plant",y:33.44,x:-111.97,m:"Tempe, JGM Water Treatment Plant"},
+  {i:63,n:"KJ7RJV",r:442.45,t:447.45,a:{c:91.5},g:"metro",k:"Corona Ranch",y:33.36,x:-112.17,m:"Laveen, Corona Ranch and Rodeo Grounds"},
+  {i:64,n:"WA7ZZT",r:442.55,t:447.55,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:65,n:"WW7B Ph",r:442.675,t:447.675,a:{c:123},g:"metro",k:"Phoenix",y:33.4484,x:-112.074,m:"Phoenix"},
+  {i:66,n:"WW7B Ph",r:442.7,t:447.7,a:{c:123},g:"metro",k:"NG Armory",y:33.46,x:-112.05,m:"Phoenix, Arizona National Guard Armory Building"},
+  {i:67,n:"W7ARA P",r:442.85,t:447.85,a:{c:100},g:"metro",k:"Shaw Butte",y:33.5936,x:-112.085,m:"Phoenix, Shaw Butte"},
+  {i:68,n:"W7ZAA P",r:442.9,t:447.9,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:69,n:"W7MOT P",r:442.975,t:447.975,a:{c:100},g:"metro",k:"24th St & Thomas",y:33.4805,x:-112.03,m:"Phoenix, 24th St & Thomas"},
+  {i:70,n:"W7MOT P",r:443.05,t:448.05,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:71,n:"W7MOT S",r:443.15,t:448.15,a:{c:100},g:"metro",k:"Scottsdale",y:33.4942,x:-111.9261,m:"Scottsdale"},
+  {i:72,n:"N9EIV P",r:443.575,t:448.575,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:73,n:"KE7JVX",r:444.275,t:449.275,a:{c:100},g:"metro",k:"Chandler",y:33.3062,x:-111.8413,m:"Chandler"},
+  {i:74,n:"W7ARA P",r:444.3,t:449.3,a:{c:100},g:"metro",k:"Chase Tower",y:33.4484,x:-112.074,m:"Phoenix, Chase Tower"},
+  {i:75,n:"AJ7T Ph",r:444.825,t:449.825,a:{c:100},g:"metro",k:"South Mountain",y:33.3387,x:-112.0662,m:"Phoenix, South Mountain"},
+  {i:76,n:"KB6POQ",r:445.9,t:440.9,a:{c:91.5},g:"metro",k:"Scottsdale",y:33.4942,x:-111.9261,m:"Scottsdale"},
+  {i:77,n:"KC7WVE",r:446.575,t:441.575,a:{c:146.2},g:"metro",k:"Scottsdale",y:33.4942,x:-111.9261,m:"Scottsdale"},
+  {i:78,n:"W7DGL P",r:446.575,t:441.575,a:{c:127.3},g:"metro",k:"Sunrise Mtn HS",y:33.67,x:-112.24,m:"Peoria, Sunrise Mountain High School"},
+  {i:79,n:"K7CAE G",r:446.6,t:441.6,a:{c:103.5},g:"metro",k:"Glendale",y:33.5387,x:-112.186,m:"Glendale"},
+  {i:80,n:"K7ARC P",r:446.9,t:441.9,a:{c:131.8},g:"metro",k:"22nd St & Camelback",y:33.509,x:-112.033,m:"Phoenix, 22nd St & Camelback Rd."},
+  {i:81,n:"K7PNX P",r:447.1,t:442.1,a:{c:136.5},g:"metro",k:"Twin Knolls",y:33.34,x:-112.03,m:"Phoenix, Twin Knolls"},
+  {i:82,n:"W7FSL C",r:447.475,t:442.475,a:{c:100},g:"metro",k:"Chandler",y:33.3062,x:-111.8413,m:"Chandler"},
+  {i:83,n:"WB5DYG",r:447.5,t:442.5,a:{c:100},g:"metro",k:"Chandler",y:33.3062,x:-111.8413,m:"Chandler"},
+  {i:84,n:"KC7GHT",r:447.575,t:442.575,a:{c:151.4},g:"metro",k:"Glendale",y:33.5387,x:-112.186,m:"Glendale"},
+  {i:85,n:"W7SGK M",r:447.65,t:442.65,a:{c:186.2},g:"metro",k:"Usery Mountain",y:33.47,x:-111.61,m:"Mesa, Usery Mountain"},
+  {i:86,n:"N7ULY C",r:447.725,t:442.725,a:{c:100},g:"metro",k:"Sacaton Peak",y:33.0847,x:-111.7386,m:"Casa Grande, Sacaton Peak"},
+  {i:87,n:"K7TMP T",r:447.75,t:442.75,a:{c:100},g:"metro",k:"Bell Butte",y:33.425,x:-111.96,m:"Tempe, Bell Butte"},
+  {i:88,n:"N7TWB P",r:447.95,t:442.95,a:{c:100},g:"metro",k:"West Phoenix",y:33.58,x:-112.237,m:"Peoria, Western Phoenix"},
+  {i:89,n:"K7PNX C",r:448.025,t:443.025,a:{c:136.5},g:"metro",k:"Sacaton Peak",y:33.0847,x:-111.7386,m:"Casa Grande, Sacaton Peak"},
+  {i:90,n:"N9EIV S",r:448.1,t:443.1,a:{c:100},g:"metro",k:"Old Town Scottsdale",y:33.494,x:-111.926,m:"Scottsdale, Old Town Scottsdale"},
+  {i:91,n:"W7BSA M",r:448.8,t:443.8,a:{c:100},g:"metro",k:"Usery Pass",y:33.4736,x:-111.6,m:"Mesa, Usery Pass"},
+  {i:92,n:"K7PNX P",r:448.85,t:443.85,a:{c:136.5},g:"metro",k:"North Mountain",y:33.59,x:-112.07,m:"Phoenix, Far North Mountain"},
+  {i:93,n:"WW7CPU",r:448.95,t:443.95,a:{c:100},g:"metro",k:"Chandler",y:33.3062,x:-111.8413,m:"Chandler"},
+  {i:94,n:"K7PNX P",r:449.025,t:444.025,a:{c:136.5},g:"metro",k:"North Mountain",y:33.5836,x:-112.0722,m:"Phoenix, North Mtn"},
+  {i:95,n:"W7ARA M",r:449.1,t:444.1,a:{c:100},g:"metro",k:"Usery Pass",y:33.4736,x:-111.6,m:"Mesa, Usery Pass"},
+  {i:96,n:"KC7QKS",r:449.25,t:444.25,a:{c:192.8},g:"metro",k:"Laveen",y:33.363,x:-112.169,m:"Laveen"},
+  {i:97,n:"N7DJZ S",r:449.325,t:444.325,a:{c:100},g:"metro",k:"San Tan Valley",y:33.19,x:-111.54,m:"San Tan Valley, Broadcast Tower"},
+  {i:98,n:"K7PNX S",r:449.4,t:444.4,a:{c:136.5},g:"metro",k:"Thompson Peak",y:33.6553,x:-111.8267,m:"Scottsdale, Thompson Peak"},
+  {i:99,n:"K0NL Sc",r:449.425,t:444.425,a:{c:100},g:"metro",k:"Scottsdale",y:33.4942,x:-111.9261,m:"Scottsdale [PL 100.0 per RepeaterBook 2026-08-17]"},
+  {i:100,n:"KF6EZT",r:449.475,t:444.475,a:{c:136.5},g:"metro",k:"Queen Creek",y:33.248,x:-111.634,m:"Queen Creek, Municipal Services Building"},
+  {i:101,n:"W7ARA P",r:449.525,t:444.525,a:{c:100},g:"metro",k:"Shaw Butte",y:33.5936,x:-112.085,m:"Phoenix, Shaw Butte"},
+  {i:102,n:"KA7ZEM",r:449.55,t:444.55,a:{c:100},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
+  {i:103,n:"WB7TJD",r:449.6,t:444.6,a:{c:100},g:"metro",k:"Mesa",y:33.4152,x:-111.8315,m:"Mesa"},
+  {i:104,n:"W7ARA M",r:449.625,t:444.625,a:{c:100},g:"metro",k:"Alma School Rd",y:33.403,x:-111.857,m:"Mesa, 1201 S. Alma School Rd"},
+  {i:105,n:"GMRS 1",r:462.5625,g:"gmrs"},
+  {i:106,n:"GMRS 2",r:462.5875,g:"gmrs"},
+  {i:107,n:"GMRS 3",r:462.6125,g:"gmrs"},
+  {i:108,n:"GMRS 4",r:462.6375,g:"gmrs"},
+  {i:109,n:"GMRS 5",r:462.6625,g:"gmrs"},
+  {i:110,n:"GMRS 6",r:462.6875,g:"gmrs"},
+  {i:111,n:"GMRS 7",r:462.7125,g:"gmrs"},
+  {i:112,n:"GMRS 8",r:467.5625,g:"gmrs"},
+  {i:113,n:"GMRS 9",r:467.5875,g:"gmrs"},
+  {i:114,n:"GMRS 10",r:467.6125,g:"gmrs"},
+  {i:115,n:"GMRS 11",r:467.6375,g:"gmrs"},
+  {i:116,n:"GMRS 12",r:467.6625,g:"gmrs"},
+  {i:117,n:"GMRS 13",r:467.6875,g:"gmrs"},
+  {i:118,n:"GMRS 14",r:467.7125,g:"gmrs"},
+  {i:119,n:"GMRS 15",r:462.55,g:"gmrs"},
+  {i:120,n:"GMRS 16",r:462.575,g:"gmrs"},
+  {i:121,n:"GMRS 17",r:462.6,g:"gmrs"},
+  {i:122,n:"GMRS 18",r:462.625,g:"gmrs"},
+  {i:123,n:"GMRS 19",r:462.65,g:"gmrs"},
+  {i:124,n:"GMRS 20",r:462.675,g:"gmrs"},
+  {i:125,n:"GMRS 21",r:462.7,g:"gmrs"},
+  {i:126,n:"GMRS 22",r:462.725,g:"gmrs"},
+  {i:127,n:"21",r:435.725,g:"sat"}
+];
+/* ==LIBRARY-END== */
+
+/* ============================================================
+   Library / group / diff state
+
+   Two data sets are kept apart on purpose:
+     library[]  what you want on the radio (built in, or your CSV)
+     onRadio    what was actually read back, keyed by channel id
+   The "vs radio" column is the diff between them.
+   ============================================================ */
+const LS_KEY = "n7wgp.vrn76.library.v1";
+
+let library = [];              // working copy, editable
+let onRadio = new Map();       // channel_id -> decoded channel from the radio
+let filter = "all";
+let selected = null;
+
+/* built-in entries are compact; expand to the full channel shape */
+const expandTone = t => !t ? null : (t.d != null ? { dcs:t.d } : { ctcss:t.c });
+function fromLib(e){
+  return {
+    channel_id: e.i,
+    name: e.n || "",
+    rx_freq: e.r,
+    tx_freq: e.t != null ? e.t : e.r,
+    tx_sub_audio: expandTone(e.a),
+    rx_sub_audio: expandTone(e.b),
+    bandwidth: e.w != null ? e.w : 1,
+    power: e.p || "high",
+    scan: e.s !== 0,
+    group: e.g || "other",
+    note: e.m || "",
+    site: e.k || null,
+    lat:  e.y != null ? e.y : null,
+    lon:  e.x != null ? e.x : null,
+    tx_mod:0, rx_mod:0, talk_around:false, pre_de_emph_bypass:false, sign:false,
+    tx_disable:false, fixed_freq:false, fixed_bandwidth:false, fixed_tx_power:false, mute:false
+  };
+}
+/* the radio wants explicit power booleans */
+function toRadio(c){
+  return Object.assign({}, c, {
+    tx_at_max_power: c.power === "high",
+    tx_at_med_power: c.power === "med"
+  });
+}
+function powerOfRadio(c){ return c.tx_at_max_power ? "high" : (c.tx_at_med_power ? "med" : "low"); }
+
+function loadLibrary(){
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved){
+      const arr = JSON.parse(saved);
+      if (Array.isArray(arr) && arr.length){ library = arr; log(`library restored from this browser (${arr.length} channels)`); return; }
+    }
+  } catch(e){ /* fall through to built-in */ }
+  library = LIBRARY.map(fromLib);
+  log(`built-in library loaded (${library.length} channels)`);
+}
+function saveLibrary(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(library)); }
+  catch(e){ log("could not save library locally: "+e.message, "l-err"); }
+}
+
+/* ============================================================
+   Radio layout
+
+   The library's `group` is a filing category (Simplex, Phoenix Metro…).
+   The RADIO's groups are hardware zones of N slots each. They are not the
+   same thing, and one library channel may be placed in as many radio
+   slots and groups as wanted -- so the mapping is explicit and editable
+   rather than derived.
+
+     layout[groupIndex] = [ channel_id | null, ... ] of length SLOTS
+   ============================================================ */
+const LS_LAYOUT = "n7wgp.vrn76.layout.v1";
+let layout = {};
+let curGroup = 0;
+let targetSlot = 0;
+
+/* The radio's self-reported region_count is not always usable (this one
+   reports too few), so allow a manual override. The radio is still the
+   default when it says something sensible. */
+let groupsOverride = null, slotsOverride = null;
+const SLOTS  = () => slotsOverride  || devInfo?.channel_count || 32;
+const GROUPS = () => groupsOverride || Math.max(1, devInfo?.region_count || 8);
+
+function groupSlots(g){
+  const n = SLOTS();
+  if (!layout[g]) layout[g] = new Array(n).fill(null);
+  if (layout[g].length < n) layout[g] = layout[g].concat(new Array(n-layout[g].length).fill(null));
+  if (layout[g].length > n) layout[g] = layout[g].slice(0, n);
+  return layout[g];
+}
+function saveLayout(){
+  try { localStorage.setItem(LS_LAYOUT, JSON.stringify(layout)); }
+  catch(e){ log("could not save layout: "+e.message, "l-err"); }
+}
+function loadLayout(){
+  try {
+    const raw = localStorage.getItem(LS_LAYOUT);
+    if (raw){ layout = JSON.parse(raw) || {}; return; }
+  } catch(e){}
+  /* First run: seed group 0 with the simplex channels and group 1 with the
+     nearest metro repeaters, so the radio is useful before any editing. */
+  layout = {};
+  const byGroup = g => library.filter(c => c.group === g);
+  const near = [...byGroup("metro")].sort((a,b) =>
+    (a.lat?haversineMi(QTH,[a.lat,a.lon]):1e9) - (b.lat?haversineMi(QTH,[b.lat,b.lon]):1e9));
+  const seed = (g, list) => {
+    const s = groupSlots(g);
+    list.slice(0, SLOTS()).forEach((c,i) => s[i] = c.channel_id);
+  };
+  seed(0, byGroup("simplex"));
+  seed(1, near);
+  seed(2, byGroup("gmrs"));
+  seed(3, byGroup("travel").concat(byGroup("sat")));
+}
+
+const libById = id => library.find(c => c.channel_id === id) || null;
+
+function renderGroupTabs(){
+  const gc = document.getElementById("grpCount"), sc = document.getElementById("slotCount");
+  if (document.activeElement !== gc) gc.value = GROUPS();
+  if (document.activeElement !== sc) sc.value = SLOTS();
+  document.getElementById("capNote").textContent =
+    devInfo
+      ? `radio reports ${devInfo.region_count} group(s) × ${devInfo.channel_count} slots` +
+        ((groupsOverride && groupsOverride !== devInfo.region_count) ||
+         (slotsOverride && slotsOverride !== devInfo.channel_count) ? " — overridden above" : "")
+      : "not connected — these are defaults until the radio reports its own";
+
+  const el = document.getElementById("grpTabs");
+  el.innerHTML = "";
+  for (let g = 0; g < GROUPS(); g++){
+    const used = groupSlots(g).filter(Boolean).length;
+    const b = document.createElement("button");
+    b.className = "chip" + (g === curGroup ? " on" : "");
+    b.textContent = `Group ${g} · ${used}/${SLOTS()}`;
+    b.onclick = () => { curGroup = g; targetSlot = 0; renderLayout(); };
+    el.appendChild(b);
+  }
+}
+
+function renderLayout(){
+  renderGroupTabs();
+  const host = document.getElementById("slots");
+  const slots = groupSlots(curGroup);
+  host.innerHTML = "";
+  slots.forEach((id, i) => {
+    const c = id == null ? null : libById(id);
+    const div = document.createElement("div");
+    div.className = "slot" + (c ? "" : " empty") + (i === targetSlot ? " target" : "");
+    const col = !c ? "transparent"
+      : c.lat == null ? "var(--muted)"
+      : (m => m <= 20 ? "var(--ok)" : m <= 35 ? "var(--accent)" : m <= 60 ? "var(--warn)" : "var(--err)")
+        (haversineMi(QTH,[c.lat,c.lon]));
+    const stat = slotStatus(curGroup, i);
+    const r = radioAt(curGroup, i);
+    let badge = "";
+    if (stat === "unread")        badge = "";
+    else if (stat === "match")    badge = c ? `<span class="st match">on radio</span>` : "";
+    else if (stat === "missing")  badge = `<span class="st missing">not written</span>`;
+    else if (stat === "extra")    badge = `<span class="st extra" title="radio holds ${r.name} ${r.rx_freq}">radio: ${r.name||"?"}</span>`;
+    else                          badge = `<span class="st diff" title="${stat.join(', ')}">${stat.length} diff</span>`;
+
+    div.innerHTML =
+      `<span class="n">${i}</span>` +
+      `<span class="dot" style="background:${col}"></span>` +
+      `<span class="nm">${c ? `${c.name} <span class="dim">${c.rx_freq.toFixed(3)}</span>`
+                            : (r ? `<span class="dim">radio: ${r.name||"?"} ${r.rx_freq.toFixed(3)}</span>` : "empty")}</span>` +
+      badge +
+      (c ? `<span class="x" title="clear slot">×</span>` : "");
+    div.onclick = e => {
+      if (e.target.classList.contains("x")){
+        slots[i] = null; saveLayout(); renderLayout(); renderRows(); return;
+      }
+      targetSlot = i; renderLayout();
+    };
+    if (c) div.title = `${c.name} — RX ${c.rx_freq} / TX ${c.tx_freq}` +
+      (c.site ? ` · ${c.site}` : "") + (c.note ? `\n${c.note}` : "");
+    host.appendChild(div);
+  });
+  const canWrite = radio.connected;
+  document.getElementById("btnWriteLayout").disabled = !canWrite || !slots.some(Boolean);
+  document.getElementById("btnWriteAllGroups").disabled =
+    !canWrite || !Object.values(layout).some(a => a && a.some(Boolean));
+}
+
+function assignToTarget(channel_id){
+  const slots = groupSlots(curGroup);
+  slots[targetSlot] = channel_id;
+  const c = libById(channel_id);
+  log(`group ${curGroup} slot ${targetSlot} ← ${c ? c.name : channel_id}`);
+  targetSlot = Math.min(targetSlot + 1, SLOTS() - 1);   // advance for fast entry
+  saveLayout(); renderLayout(); renderRows();
+}
+
+/* ---------- diff ----------
+   onRadio is keyed by GROUP then SLOT, because a slot's position is what the
+   radio actually stores -- the library's channel number is just an id here.
+   Comparing library[n] against radio slot n (the old behaviour) was
+   meaningless once the layout could put any channel in any slot.          */
+
+/* content equality, ignoring which slot it happens to sit in */
+function sameChannel(r, c){
+  return Math.round(r.rx_freq*1e6) === Math.round(c.rx_freq*1e6)
+      && Math.round(r.tx_freq*1e6) === Math.round(c.tx_freq*1e6)
+      && toneEq(r.tx_sub_audio, c.tx_sub_audio)
+      && toneEq(r.rx_sub_audio, c.rx_sub_audio);
+}
+function fieldDiff(r, c){
+  const d = [];
+  if (Math.round(r.rx_freq*1e6) !== Math.round(c.rx_freq*1e6)) d.push("rx");
+  if (Math.round(r.tx_freq*1e6) !== Math.round(c.tx_freq*1e6)) d.push("tx");
+  if (!toneEq(r.tx_sub_audio, c.tx_sub_audio)) d.push("tx tone");
+  if (!toneEq(r.rx_sub_audio, c.rx_sub_audio)) d.push("rx tone");
+  if ((r.bandwidth|0) !== (c.bandwidth|0)) d.push("bw");
+  if (powerOfRadio(r) !== c.power) d.push("power");
+  if ((r.name||"").trim() !== (c.name||"").trim()) d.push("name");
+  if (!!r.scan !== !!c.scan) d.push("scan");
+  return d;
+}
+const anyRadioData = () => [...onRadio.values()].some(m => m && m.size);
+const radioAt = (g, slot) => onRadio.get(g)?.get(slot) || null;
+
+/* status of one LAYOUT slot against the radio */
+function slotStatus(g, slot){
+  if (!onRadio.has(g)) return "unread";
+  const r = radioAt(g, slot);
+  const id = groupSlots(g)[slot];
+  const c = id == null ? null : libById(id);
+  if (!c && !r) return "match";              // both empty
+  if (!c && r)  return "extra";              // radio has something you did not plan
+  if (c && !r)  return "missing";            // planned, not on the radio
+  const d = fieldDiff(r, c);
+  return d.length ? d : "match";
+}
+
+/* where does this library channel already live on the radio? */
+function radioLocations(c){
+  const hits = [];
+  for (const [g, slots] of onRadio)
+    for (const [slot, r] of slots)
+      if (sameChannel(r, c)) hits.push({ g, slot, exact: fieldDiff(r, c).length === 0 });
+  return hits;
+}
+
+/* ============================================================
+   Repeater map — inline SVG, no tile server, works offline.
+
+   Equirectangular projection with a cos(lat) correction. Over a
+   150-mile span that is visually indistinguishable from a proper
+   projection and needs no dependencies.
+   ============================================================ */
+const QTH = [33.250279, -111.882017];
+const CAMP = [34.1947373, -110.7583645];   // Nova's campground, from the station notes
+
+function haversineMi(a, b){
+  const R = 3958.8, rad = d => d*Math.PI/180;
+  const dLat = rad(b[0]-a[0]), dLon = rad(b[1]-a[1]);
+  const s = Math.sin(dLat/2)**2 + Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+function bearingOf(a, b){
+  const rad = d=>d*Math.PI/180, deg = r=>r*180/Math.PI;
+  const dLon = rad(b[1]-a[1]);
+  const y = Math.sin(dLon)*Math.cos(rad(b[0]));
+  const x = Math.cos(rad(a[0]))*Math.sin(rad(b[0])) - Math.sin(rad(a[0]))*Math.cos(rad(b[0]))*Math.cos(dLon);
+  return COMPASS[Math.round(((deg(Math.atan2(y,x))+360)%360)/22.5)%16];
+}
+
+let mapMode = "metro";       // "metro" | "all"
+let siteFilter = null;
+
+function siteIndex(){
+  const ix = new Map();
+  library.forEach(c => {
+    if (!c.site || c.lat == null) return;
+    if (!ix.has(c.site)) ix.set(c.site, {
+      site:c.site, lat:c.lat, lon:c.lon, ids:[],
+      mi: haversineMi(QTH,[c.lat,c.lon]), brg: bearingOf(QTH,[c.lat,c.lon])
+    });
+    ix.get(c.site).ids.push(c.channel_id);
+  });
+  return [...ix.values()].sort((a,b)=>a.mi-b.mi);
+}
+
+function renderMap(){
+  const svg = document.getElementById("map");
+  const W = 1000, H = 640, PAD = 46;
+  const all = siteIndex();
+  const sites = mapMode === "metro" ? all.filter(s => s.mi <= 40) : all;
+  if (!sites.length){ svg.innerHTML = ""; return; }
+
+  const pts = [...sites.map(s=>[s.lat,s.lon]), QTH];
+  if (mapMode === "all") pts.push(CAMP);
+  const lat0 = QTH[0], kx = Math.cos(lat0*Math.PI/180);
+  const px = p => (p[1]-QTH[1])*kx, py = p => -(p[0]-QTH[0]);
+  const xs = pts.map(px), ys = pts.map(py);
+  const spanX = Math.max(...xs)-Math.min(...xs), spanY = Math.max(...ys)-Math.min(...ys);
+  const cx = (Math.max(...xs)+Math.min(...xs))/2, cy = (Math.max(...ys)+Math.min(...ys))/2;
+  const scale = Math.min((W-2*PAD)/(spanX||1), (H-2*PAD)/(spanY||1)) * 0.94;
+  const X = p => W/2 + (px(p)-cx)*scale, Y = p => H/2 + (py(p)-cy)*scale;
+
+  // one degree of latitude ~ 69 miles, so miles -> svg units
+  const miToPx = 1/69 * scale;
+  const rings = mapMode === "metro" ? [10,20,30,40] : [25,50,75,100,125];
+  const hx = X(QTH), hy = Y(QTH);
+
+  let s = "";
+  rings.forEach(r => {
+    const rr = r*miToPx;
+    if (rr > 8) {
+      s += `<circle class="ring" cx="${hx}" cy="${hy}" r="${rr.toFixed(1)}"/>`;
+      s += `<text class="ringlab" x="${hx+4}" y="${(hy-rr+13).toFixed(1)}">${r} mi</text>`;
+    }
+  });
+
+  const maxN = Math.max(...sites.map(s2=>s2.ids.length));
+  sites.forEach(st => {
+    const x = X([st.lat,st.lon]), y = Y([st.lat,st.lon]);
+    s += `<line class="spoke" x1="${hx}" y1="${hy}" x2="${x}" y2="${y}"/>`;
+  });
+  /* Greedy label placement. The metro cluster is dense enough that naive
+     labelling produces unreadable overlap, so try a few offsets per site and
+     drop the label entirely rather than stack text. Busiest sites go first
+     so they win the contested space; everything stays available on hover. */
+  const boxes = [];
+  const fits = b => !boxes.some(o => !(b.x2 < o.x1 || b.x1 > o.x2 || b.y2 < o.y1 || b.y1 > o.y2));
+  const place = (x, y, text, r) => {
+    // width must reflect the FULL rendered string (name + count + distance),
+    // not just the site name, or the reservation is too small and labels touch
+    const w = text.length * 6.75 + 10, h = 15;
+    for (const [dx, dy, anchor] of [
+      [0, -r-8, "middle"], [0, r+16, "middle"],
+      [r+8, 4, "start"], [-r-8, 4, "end"],
+      [0, -r-21, "middle"], [0, r+29, "middle"]
+    ]){
+      const cxp = x+dx, cyp = y+dy;
+      const x1 = anchor==="middle" ? cxp-w/2 : anchor==="start" ? cxp : cxp-w;
+      const b = { x1, x2:x1+w, y1:cyp-h, y2:cyp+3 };
+      if (b.x1 < 2 || b.x2 > W-2 || b.y1 < 2 || b.y2 > H-2) continue;
+      if (!fits(b)) continue;
+      boxes.push(b);
+      return { x:cxp, y:cyp, anchor };
+    }
+    return null;
+  };
+
+  const ordered = [...sites].sort((a,b) => b.ids.length - a.ids.length || a.mi - b.mi);
+
+  /* Reserve EVERY dot (and the home marker) before placing any label, so a
+     label chosen early cannot land on a dot that gets drawn later. */
+  const laid = ordered.map(st => {
+    const x = X([st.lat,st.lon]), y = Y([st.lat,st.lon]);
+    const r = 5 + 9*Math.sqrt(st.ids.length/maxN);
+    boxes.push({ x1:x-r-2, x2:x+r+2, y1:y-r-2, y2:y+r+2 });
+    return { st, x, y, r };
+  });
+  boxes.push({ x1:hx-30, x2:hx+30, y1:hy-12, y2:hy+28 });   // home diamond + its label
+
+  const marks = laid.map(({ st, x, y, r }) => {
+    // colour by how plausible the path is from home, using the station notes' own bands
+    const col = st.mi <= 20 ? "var(--ok)" : st.mi <= 35 ? "var(--accent)"
+              : st.mi <= 60 ? "var(--warn)" : "var(--err)";
+    const on = siteFilter === st.site ? " on" : "";
+    const worthLabel = st.ids.length >= 2 || st.mi > 40 || siteFilter === st.site;
+    const labelText = `${st.site} ${st.ids.length}·${Math.round(st.mi)}mi`;
+    const pos = worthLabel ? place(x, y, labelText, r) : null;
+    return `<g class="site${on}" data-site="${st.site.replace(/"/g,"&quot;")}">` +
+      `<title>${st.site} — ${st.ids.length} channel(s), ${st.mi.toFixed(1)} mi ${st.brg}</title>` +
+      `<circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${col}" opacity="0.85"/>` +
+      (pos ? `<text class="lab" x="${pos.x.toFixed(1)}" y="${pos.y.toFixed(1)}" text-anchor="${pos.anchor}">` +
+             `${st.site} <tspan class="sm">${st.ids.length}·${Math.round(st.mi)}mi</tspan></text>` : "") +
+      `</g>`;
+  });
+  s += marks.join("");
+
+  if (mapMode === "all"){
+    const cxp = X(CAMP), cyp = Y(CAMP);
+    s += `<g><title>Nova's campground</title><rect class="camp" x="${cxp-5}" y="${cyp-5}" width="10" height="10" transform="rotate(45 ${cxp} ${cyp})"/>` +
+         `<text class="lab sm" x="${cxp}" y="${cyp-11}" text-anchor="middle">camp</text></g>`;
+  }
+
+  s += `<g><title>N7WGP — DM43bg</title>` +
+       `<path class="home" d="M${hx} ${hy-9} L${hx+9} ${hy} L${hx} ${hy+9} L${hx-9} ${hy} Z"/>` +
+       `<text class="homelab" x="${hx}" y="${hy+24}" text-anchor="middle">N7WGP</text></g>`;
+
+  svg.innerHTML = s;
+  svg.querySelectorAll(".site").forEach(g => {
+    g.onclick = () => {
+      const name = g.getAttribute("data-site");
+      siteFilter = siteFilter === name ? null : name;
+      renderMap(); renderChips(); renderRows(); updateSiteSel();
+    };
+  });
+}
+
+function updateSiteSel(){
+  const el = document.getElementById("siteSel");
+  const btn = document.getElementById("btnClearSite");
+  if (siteFilter){
+    const st = siteIndex().find(s=>s.site===siteFilter);
+    el.textContent = st ? `${st.site} — ${st.ids.length} ch, ${st.mi.toFixed(1)} mi ${st.brg}` : siteFilter;
+    btn.classList.remove("hidden");
+  } else { el.textContent = ""; btn.classList.add("hidden"); }
+}
+
+/* ---------- render ---------- */
+const fmtFreq = f => f ? f.toFixed(4) : "—";
+function shiftOf(c){
+  const d = c.tx_freq - c.rx_freq;
+  if (Math.abs(d) < 1e-6) return "simplex";
+  return (d>0?"+":"") + d.toFixed(3);
+}
+function toneCell(t){
+  const txt = toneToText(t);
+  if (!txt) return '<span class="dim">—</span>';
+  return `<span class="tag ${t.dcs!=null?'dcs':'ctcss'}">${txt}</span>`;
+}
+function shown(){
+  let list = filter === "all" ? library : library.filter(c => c.group === filter);
+  if (siteFilter) list = list.filter(c => c.site === siteFilter);
+  return list;
+}
+
+function renderChips(){
+  const el = document.getElementById("groupChips");
+  const counts = {};
+  library.forEach(c => counts[c.group] = (counts[c.group]||0)+1);
+  const groups = ["all", ...Object.keys(LIB_GROUPS).filter(g => counts[g]),
+                  ...Object.keys(counts).filter(g => !LIB_GROUPS[g])];
+  el.innerHTML = "";
+  [...new Set(groups)].forEach(g => {
+    const b = document.createElement("button");
+    b.className = "chip" + (filter===g ? " on" : "");
+    const n = g==="all" ? library.length : counts[g]||0;
+    b.textContent = `${g==="all" ? "All" : (LIB_GROUPS[g]||g)} · ${n}`;
+    b.onclick = ()=>{ filter = g; renderChips(); renderRows(); };
+    el.appendChild(b);
+  });
+}
+
+function renderStats(){
+  const el = document.getElementById("stats");
+  const list = shown();
+  const planned = list.filter(c => {
+    for (let g = 0; g < GROUPS(); g++) if (groupSlots(g).includes(c.channel_id)) return true;
+    return false;
+  }).length;
+  if (!anyRadioData()){
+    el.innerHTML =
+      `<span><b>${list.length}</b> shown of <b>${library.length}</b> in library</span>` +
+      `<span class="st extra">${planned} placed in a group</span>` +
+      `<span class="dim">radio not read yet — connect and press “Read radio → compare”</span>`;
+    return;
+  }
+  let onRad = 0, partial = 0;
+  list.forEach(c => {
+    const hits = radioLocations(c);
+    if (!hits.length) return;
+    if (hits.every(h => h.exact)) onRad++; else partial++;
+  });
+  el.innerHTML =
+    `<span><b>${list.length}</b> shown</span>` +
+    `<span class="st extra">${planned} placed in a group</span>` +
+    `<span class="st match">${onRad} already on radio</span>` +
+    (partial ? `<span class="st diff">${partial} on radio but differing</span>` : "") +
+    `<span class="st missing">${list.length - onRad - partial} not on radio</span>`;
+}
+
+function renderRows(){
+  const tb = document.getElementById("rows");
+  const list = shown();
+  tb.innerHTML = "";
+  list.forEach(c=>{
+    const tr = document.createElement("tr");
+    if (selected === c.channel_id) tr.className = "sel";
+    /* "where does this live on the radio", not "does slot N match" -- the
+       latter stopped meaning anything once any channel can go in any slot. */
+    let stat;
+    if (!anyRadioData()) stat = '<span class="st unread">—</span>';
+    else {
+      const hits = radioLocations(c);
+      if (!hits.length) stat = '<span class="st missing">not on radio</span>';
+      else {
+        const label = hits.map(h => `G${h.g}:${h.slot}`).join(" ");
+        const exact = hits.every(h => h.exact);
+        stat = `<span class="st ${exact ? "match" : "diff"}" title="${
+          exact ? "identical on the radio" : "same frequency, but some settings differ"
+        }">${label}</span>`;
+      }
+    }
+    /* also show where it sits in YOUR plan, so the two line up */
+    const planned = [];
+    for (let g = 0; g < GROUPS(); g++){
+      const at = groupSlots(g).indexOf(c.channel_id);
+      if (at >= 0) planned.push(`G${g}:${at}`);
+    }
+    const planCell = planned.length
+      ? `<span class="st extra">${planned.join(" ")}</span>`
+      : '<span class="dim">—</span>';
+    tr.innerHTML =
+      `<td class="plus"><button title="place in group ${curGroup}, slot ${targetSlot}">+</button></td>` +
+      `<td class="num">${c.channel_id}</td>` +
+      `<td>${c.name || '<span class="dim">(empty)</span>'}</td>` +
+      `<td class="num">${fmtFreq(c.rx_freq)}</td>` +
+      `<td class="num">${fmtFreq(c.tx_freq)}</td>` +
+      `<td>${shiftOf(c)}</td>` +
+      `<td>${toneCell(c.tx_sub_audio)}</td>` +
+      `<td>${toneCell(c.rx_sub_audio)}</td>` +
+      `<td>${c.bandwidth ? "W" : "N"}</td>` +
+      `<td>${c.power}</td>` +
+      `<td class="dim">${c.site || "—"}</td>` +
+      `<td class="num dim">${c.lat != null ? Math.round(haversineMi(QTH,[c.lat,c.lon]))+" mi" : "—"}</td>` +
+      `<td class="dim">${LIB_GROUPS[c.group]||c.group}</td>` +
+      `<td>${planCell}</td>` +
+      `<td>${stat}</td>`;
+    tr.title = c.note || "";
+    tr.onclick = e => {
+      if (e.target.tagName === "BUTTON"){ assignToTarget(c.channel_id); return; }
+      selected = c.channel_id; loadEditor(c); renderRows();
+    };
+    tb.appendChild(tr);
+  });
+  renderStats();
+}
+
+/* ---------- editor ---------- */
+function fillGroupSelect(){
+  const sel = document.getElementById("e_grp");
+  sel.innerHTML = "";
+  const keys = [...new Set([...Object.keys(LIB_GROUPS), ...library.map(c=>c.group)])];
+  keys.forEach(g=>{
+    const o = document.createElement("option");
+    o.value = g; o.textContent = LIB_GROUPS[g]||g; sel.appendChild(o);
+  });
+}
+const trimNum = v => v ? String(Number(v.toFixed(6))) : "";
+function loadEditor(c){
+  const g = id => document.getElementById(id);
+  g("e_id").value = c.channel_id;
+  g("e_name").value = c.name || "";
+  g("e_rx").value = trimNum(c.rx_freq);
+  g("e_tx").value = trimNum(c.tx_freq);
+  g("e_txt").value = toneToText(c.tx_sub_audio);
+  g("e_rxt").value = toneToText(c.rx_sub_audio);
+  g("e_bw").value = String(c.bandwidth|0);
+  g("e_pwr").value = c.power;
+  g("e_scan").value = c.scan ? "1" : "0";
+  g("e_grp").value = c.group;
+}
+function editorToChannel(){
+  const g = id => document.getElementById(id).value;
+  const id = parseInt(g("e_id"),10);
+  const base = library.find(c=>c.channel_id===id) || fromLib({ i:id, r:0 });
+  const rx = parseFloat(g("e_rx")) || 0;
+  const tx = parseFloat(g("e_tx"));
+  return Object.assign({}, base, {
+    channel_id: id,
+    name: g("e_name").slice(0,10),
+    rx_freq: Math.round(rx*1e6)/1e6,
+    tx_freq: Math.round((isNaN(tx)?rx:tx)*1e6)/1e6,
+    tx_sub_audio: toneFromText(g("e_txt")),
+    rx_sub_audio: toneFromText(g("e_rxt")),
+    bandwidth: parseInt(g("e_bw"),10),
+    power: g("e_pwr"),
+    scan: g("e_scan")==="1",
+    group: g("e_grp")
+  });
+}
+
+/* ---------- CHIRP CSV ---------- */
+const CSV_COLS = ["Location","Name","Frequency","Duplex","Offset","Tone",
+  "rToneFreq","cToneFreq","DtcsCode","Mode","Power","Skip","Comment"];
+function exportCsv(){
+  const rows = [CSV_COLS.join(",")];
+  shown().forEach(c=>{
+    if (!c.rx_freq) return;
+    const d = c.tx_freq - c.rx_freq;
+    let duplex = "", offset = "0.000000";
+    if (Math.abs(d) > 1e-6){ duplex = d>0 ? "+" : "-"; offset = Math.abs(d).toFixed(6); }
+    const tx = c.tx_sub_audio, rx = c.rx_sub_audio;
+    let tone="", rTone="88.5", cTone="88.5", dtcs="023";
+    if (tx?.dcs != null || rx?.dcs != null){ tone="DTCS"; dtcs=String(tx?.dcs ?? rx?.dcs).padStart(3,"0"); }
+    else if (tx?.ctcss != null && rx?.ctcss != null){ tone="TSQL"; cTone=rx.ctcss.toFixed(1); rTone=tx.ctcss.toFixed(1); }
+    else if (tx?.ctcss != null){ tone="Tone"; rTone=tx.ctcss.toFixed(1); }
+    const q = s => `"${String(s).replace(/"/g,'""')}"`;
+    rows.push([c.channel_id, q(c.name), c.rx_freq.toFixed(6), duplex, offset, tone,
+      rTone, cTone, dtcs, c.bandwidth ? "FM" : "NFM",
+      c.power==="high"?"High":c.power==="med"?"Mid":"Low",
+      c.scan ? "" : "S", q(c.note||"")].join(","));
+  });
+  const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `N7WGP_${filter}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+  log(`exported ${rows.length-1} channels`);
+}
+function parseCsvLine(line){
+  const out=[]; let cur="", q=false;
+  for (let i=0;i<line.length;i++){
+    const ch=line[i];
+    if (q){ if (ch==='"'){ if (line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if (ch==='"') q=true;
+    else if (ch===",") { out.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+function importCsv(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  const hdr = parseCsvLine(lines[0]).map(h=>h.trim());
+  const ix = {}; hdr.forEach((h,i)=>ix[h]=i);
+  if (ix.Frequency == null){ log("CSV has no Frequency column", "l-err"); return; }
+  let n = 0;
+  for (let i=1;i<lines.length;i++){
+    const f = parseCsvLine(lines[i]);
+    const get = k => (ix[k]!=null ? (f[ix[k]]||"").trim() : "");
+    const rx = parseFloat(get("Frequency"));
+    const id = parseInt(get("Location"),10);
+    if (!rx || isNaN(id)) continue;
+    const duplex = get("Duplex").toLowerCase();
+    const off = parseFloat(get("Offset")) || 0;
+    let tx = rx;
+    if (duplex === "+") tx = rx + off;
+    else if (duplex === "-") tx = rx - off;
+    const tm = get("Tone").toUpperCase();
+    let txt=null, rxt=null;
+    if (tm === "TONE") txt = { ctcss: parseFloat(get("rToneFreq")) };
+    else if (tm === "TSQL"){ const t = parseFloat(get("cToneFreq")); txt={ctcss:t}; rxt={ctcss:t}; }
+    else if (tm === "DTCS"){ const d = parseInt(get("DtcsCode"),10); txt={dcs:d}; rxt={dcs:d}; }
+    const comment = get("Comment");
+    const isSimplex = Math.abs(tx-rx) < 1e-6;
+    let group = id>=105 && id<=126 ? "gmrs"
+              : id>=127 ? "sat"
+              : /\[TRAVEL/i.test(comment) ? "travel"
+              : isSimplex ? "simplex" : "metro";
+    /* Keep any site/coords the built-in library already knows for this slot —
+       CHIRP CSVs carry no geography, so re-importing would otherwise blank
+       the map. */
+    const prior = library.find(c=>c.channel_id===id);
+    const rec = Object.assign(fromLib({ i:id, r:0 }),
+      prior ? { site:prior.site, lat:prior.lat, lon:prior.lon } : {}, {
+      channel_id:id, name:get("Name").slice(0,10),
+      rx_freq: Math.round(rx*1e6)/1e6, tx_freq: Math.round(tx*1e6)/1e6,
+      tx_sub_audio:txt, rx_sub_audio:rxt,
+      bandwidth: get("Mode").toUpperCase().includes("N") ? 0 : 1,
+      power: powerFromCsv(get("Power")),
+      scan: get("Skip").toUpperCase() !== "S",
+      group, note: comment
+    });
+    const at = library.findIndex(c=>c.channel_id===id);
+    if (at>=0) library[at] = rec; else library.push(rec);
+    n++;
+  }
+  library.sort((a,b)=>a.channel_id-b.channel_id);
+  saveLibrary(); fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
+  log(`imported ${n} channels into the library — nothing written to the radio yet`);
+}
+
+/* ---------- bulk radio ops ---------- */
+async function readAll(){
+  const count = SLOTS();
+  const groups = GROUPS();
+  const prog = document.getElementById("prog");
+  prog.classList.remove("hidden"); prog.max = count * groups; prog.value = 0;
+  onRadio.clear();
+  let total = 0, done = 0, readGroups = 0;
+
+  for (let g = 0; g < groups; g++){
+    if (groups > 1){
+      try { await setRegion(g); }
+      catch(e){
+        log(`cannot switch to group ${g} (${e.message}) — reading group 0 only`, "l-err");
+        break;
+      }
+    }
+    const slots = new Map();
+    log(`reading group ${g} — ${count} slots…`);
+    for (let i = 0; i < count; i++){
+      try {
+        const c = await readChannel(i);
+        if (c.rx_freq > 0){ slots.set(i, c); total++; }
+      } catch(e){
+        if (!/NOT_SUPPORTED|INVALID_PARAMETER/.test(e.message))
+          log(`group ${g} slot ${i}: ${e.message}`, "l-err");
+      }
+      prog.value = ++done;
+      if (i % 8 === 7){ renderRows(); renderLayout(); }
+    }
+    onRadio.set(g, slots);
+    readGroups++;
+    log(`  group ${g}: ${slots.size} programmed`, "l-rx");
+  }
+
+  if (groups > 1){ try { await setRegion(curGroup); } catch(e){} }
+  prog.classList.add("hidden");
+  renderRows(); renderLayout();
+  log(`read ${total} programmed channels across ${readGroups} group(s)`, "l-rx");
+}
+
+function radioCapacity(){ return devInfo?.channel_count || null; }
+
+/* Writes one radio group from the layout. Slot index IS the channel_id sent
+   to the radio, so a library channel numbered 72 can land in slot 3 of group
+   1 -- the library number is only an identifier here, never a destination. */
+async function writeGroup(g, { confirmFirst = true } = {}){
+  const slots = groupSlots(g);
+  const items = slots.map((id, i) => ({ i, c: id == null ? null : libById(id) }))
+                     .filter(x => x.c);
+  if (!items.length){ log(`group ${g} is empty — nothing to write`); return { ok:0, bad:0 }; }
+
+  if (confirmFirst && !confirm(
+      `Write ${items.length} channel(s) into radio group ${g}?\n\n` +
+      items.slice(0,8).map(x => `  ${x.i}: ${x.c.name} ${x.c.rx_freq}`).join("\n") +
+      (items.length > 8 ? `\n  … and ${items.length-8} more` : "") +
+      `\n\nThis overwrites those slots.`)) return { ok:0, bad:0 };
+
+  if (GROUPS() > 1){
+    try { await setRegion(g); log(`switched to radio group ${g}`); }
+    catch(e){ log(`could not switch to group ${g}: ${e.message}`, "l-err"); return { ok:0, bad:0 }; }
+  }
+
+  const prog = document.getElementById("prog");
+  prog.classList.remove("hidden"); prog.max = items.length; prog.value = 0;
+  let ok = 0, bad = 0;
+  for (const { i, c } of items){
+    try {
+      await writeChannel(toRadio(Object.assign({}, c, { channel_id: i })));
+      ok++; log(`group ${g} slot ${i} ← ${c.name}`, "l-rx");
+    } catch(e){ bad++; log(`group ${g} slot ${i}: ${e.message}`, "l-err"); }
+    prog.value = ok + bad;
+  }
+  prog.classList.add("hidden");
+  log(`group ${g}: ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
+  return { ok, bad };
+}
+
+/* ---------- wiring ---------- */
+function onConnectError(e){
+  const [what, how] = explain(e);
+  log(`connect failed [${e.name||"Error"}]: ${e.message||e}`, "l-err");
+  showErr(`<b>${what}</b><br>${how}`);
+  setStatus("error", "err");
+}
+document.getElementById("btnConnect").onclick = () => connect(false).catch(onConnectError);
+document.getElementById("btnConnectAny").onclick = () => connect(true).catch(onConnectError);
+document.getElementById("btnDisconnect").onclick = disconnect;
+document.getElementById("btnReadAll").onclick = () => readAll().catch(e=>log(e.message,"l-err"));
+document.getElementById("btnProbe").onclick = () => probeRegions().catch(e=>log(e.message,"l-err"));
+
+document.getElementById("btnApply").onclick = () => {
+  const c = editorToChannel();
+  const at = library.findIndex(x=>x.channel_id===c.channel_id);
+  if (at>=0) library[at]=c; else { library.push(c); library.sort((a,b)=>a.channel_id-b.channel_id); }
+  selected = c.channel_id;
+  saveLibrary(); fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
+  log(`library updated: ch ${c.channel_id} ${c.name}`);
+};
+document.getElementById("btnWriteOne").onclick = async () => {
+  const c = editorToChannel();
+  if (!confirm(`Write channel ${c.channel_id} "${c.name}" — RX ${c.rx_freq} / TX ${c.tx_freq} — to the radio?`)) return;
+  try {
+    await writeChannel(toRadio(c));
+    log(`wrote ch ${c.channel_id}`, "l-rx");
+    onRadio.set(c.channel_id, await readChannel(c.channel_id));
+    renderRows();
+  } catch(e){ log("write failed: "+e.message,"l-err"); }
+};
+document.getElementById("btnReadOne").onclick = async () => {
+  const id = parseInt(document.getElementById("e_id").value,10);
+  try { onRadio.set(id, await readChannel(id)); renderRows(); log(`read ch ${id} from radio`, "l-rx"); }
+  catch(e){ log(e.message,"l-err"); }
+};
+
+document.getElementById("btnExport").onclick = exportCsv;
+document.getElementById("btnImport").onclick = () => document.getElementById("fileCsv").click();
+document.getElementById("fileCsv").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader(); rd.onload = () => importCsv(rd.result); rd.readAsText(f);
+};
+document.getElementById("btnReset").onclick = () => {
+  if (!confirm("Discard your local edits and reload the built-in channel library?")) return;
+  localStorage.removeItem(LS_KEY);
+  library = LIBRARY.map(fromLib);
+  saveLibrary(); fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
+  log(`reset to built-in library (${library.length} channels)`);
+};
+document.getElementById("btnClearLog").onclick = () =>
+  document.getElementById("log").innerHTML = "";
+
+document.getElementById("grpCount").onchange = e => {
+  groupsOverride = Math.max(1, parseInt(e.target.value,10) || 1);
+  if (curGroup >= groupsOverride) curGroup = groupsOverride - 1;
+  saveLayout(); renderLayout(); renderRows();
+};
+document.getElementById("slotCount").onchange = e => {
+  slotsOverride = Math.max(1, parseInt(e.target.value,10) || 1);
+  targetSlot = Math.min(targetSlot, slotsOverride - 1);
+  saveLayout(); renderLayout(); renderRows();
+};
+document.getElementById("btnAddShown").onclick = () =>
+  document.getElementById("btnFillGroup").click();
+document.getElementById("btnFillGroup").onclick = () => {
+  const slots = groupSlots(curGroup);
+  const already = new Set(slots.filter(Boolean));
+  let placed = 0;
+  for (const c of shown()){
+    if (already.has(c.channel_id)) continue;      // don't duplicate within one group
+    const free = slots.indexOf(null);
+    if (free < 0) break;
+    slots[free] = c.channel_id; already.add(c.channel_id); placed++;
+  }
+  saveLayout(); renderLayout(); renderRows();
+  const left = shown().length - placed;
+  log(`filled ${placed} slot(s) in group ${curGroup} from the shown list` +
+      (left > 0 ? ` — ${left} did not fit; put them in another group` : ""),
+      left > 0 ? "l-err" : "l-inf");
+};
+document.getElementById("btnClearGroup").onclick = () => {
+  if (!confirm(`Clear every slot in group ${curGroup}? This only edits the plan, not the radio.`)) return;
+  layout[curGroup] = new Array(SLOTS()).fill(null);
+  saveLayout(); renderLayout(); renderRows();
+};
+document.getElementById("btnWriteLayout").onclick = () =>
+  writeGroup(curGroup).then(()=>readAll()).catch(e=>log(e.message,"l-err"));
+document.getElementById("btnWriteAllGroups").onclick = async () => {
+  const gs = [...Array(GROUPS()).keys()].filter(g => groupSlots(g).some(Boolean));
+  if (!confirm(`Write ${gs.length} group(s) — ${gs.join(", ")} — to the radio?\n\n` +
+               `This overwrites every slot listed in those groups.`)) return;
+  let ok = 0, bad = 0;
+  for (const g of gs){
+    const r = await writeGroup(g, { confirmFirst:false });
+    ok += r.ok; bad += r.bad;
+  }
+  log(`all groups done — ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
+  await readAll().catch(()=>{});
+};
+
+function setMapMode(m){
+  mapMode = m;
+  document.getElementById("mapMetro").className = "chip" + (m==="metro" ? " on" : "");
+  document.getElementById("mapAll").className   = "chip" + (m==="all"   ? " on" : "");
+  renderMap();
+}
+document.getElementById("mapMetro").onclick = () => setMapMode("metro");
+document.getElementById("mapAll").onclick   = () => setMapMode("all");
+document.getElementById("btnClearSite").onclick = () => {
+  siteFilter = null; renderMap(); renderChips(); renderRows(); updateSiteSel();
+};
+
+/* ---------- boot ---------- */
+let BRAVE = false;
+(async function boot(){
+  try { BRAVE = !!(navigator.brave && await navigator.brave.isBrave()); } catch(e){}
+
+  const ok = !!navigator.bluetooth && window.isSecureContext;
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("foot").classList.remove("hidden");
+  if (!ok) document.getElementById("gate").classList.remove("hidden");
+  loadLibrary(); loadLayout();
+  fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
+
+  if (!ok){
+    log("browser cannot do Web Bluetooth — library and CSV still work", "l-err");
+    return;
+  }
+  /* Only warn about something actually wrong. Brave with the flag already
+     enabled works fine, so detecting Brave is NOT by itself a reason to
+     nag -- that guidance is kept for the error path instead. */
+  let adapter = null;
+  try { if (navigator.bluetooth.getAvailability) adapter = await navigator.bluetooth.getAvailability(); }
+  catch(e){ adapter = null; }
+  if (adapter === false){
+    showErr("<b>No Bluetooth adapter is available to this browser.</b><br>" +
+      "On macOS: System Settings → Privacy &amp; Security → Bluetooth → enable your browser, then restart it.");
+    log("no Bluetooth adapter reported", "l-err");
+  } else {
+    log("ready — Web Bluetooth available" + (BRAVE ? " (Brave detected)" : ""));
+  }
+})();
+</script>
+</body>
+</html>
