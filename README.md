@@ -86,6 +86,6 @@ addon domain on the same account, with Cloudflare DNS in front.
 ## Credit
 
 Protocol reverse-engineered by Kyle Husmann in
-[benlink](https://github.com/khusmann/benlink) (MIT) and reimplemented here in
+[benlink](https://github.com/khusmann/benlink) (Apache-2.0) and reimplemented here in
 plain JavaScript. [`PROTOCOL.md`](PROTOCOL.md) captures what was needed, so the
 Python is not required to work on this.

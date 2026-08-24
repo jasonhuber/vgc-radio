@@ -2,7 +2,7 @@
 
 Applies to the whole family — **VGC VR-N76, VR-N7500, VR-N7600, BTech UV-Pro,
 RadioOddity GA-5WB**. Reverse-engineered by Kyle Husmann in
-[benlink](https://github.com/khusmann/benlink) (MIT); this file is the subset
+[benlink](https://github.com/khusmann/benlink) (Apache-2.0); this file is the subset
 needed to reimplement it, extracted so a future session need not re-read the
 Python.
 
