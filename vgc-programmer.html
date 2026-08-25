@@ -4,7 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>N7WGP · VR-N76 Programmer</title>
-<meta name="description" content="Program a VGC VR-N76 handheld radio over Bluetooth straight from the browser. Preloaded Phoenix-area channel library, group filtering, and radio-vs-library diffing. No install, no backend.">
+<meta name="description" content="Program and test VGC/Benshi radios over Bluetooth, build channel groups, configure APRS, and map real-world receive coverage.">
+<meta name="theme-color" content="#161b22" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta property="og:title" content="N7WGP · VGC/Benshi Radio Programmer">
+<meta property="og:description" content="Browser-based channel programming, APRS setup and field coverage mapping for VGC/Benshi radios.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://n7wgp.com/">
+<meta property="og:image" content="https://n7wgp.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="N7WGP · VGC/Benshi Radio Programmer">
+<meta name="twitter:description" content="Program · APRS · Coverage">
+<meta name="twitter:image" content="https://n7wgp.com/og.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <!-- Everything is inlined: the page loads no asset from any other origin. The only network
      calls it ever makes are to its own /api for sign-in, coverage sync and list review. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c6fd6'/%3E%3Cpath d='M16 25V12' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='8.5' r='2.5' fill='white'/%3E%3Cpath d='M10.4 24.6a8 8 0 0 1 0-11.3M21.6 13.3a8 8 0 0 1 0 11.3' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -86,8 +98,17 @@ main{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
   color:var(--muted);margin-top:9px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
   vertical-align:-1px}
-#auth{max-width:440px;margin:48px auto;padding:22px 24px;background:var(--panel);
-  border:1px solid var(--line);border-radius:12px}
+#auth{max-width:1040px;margin:42px auto;padding:0 22px;display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:28px;align-items:start}
+#authHero{padding:24px 4px}
+#authHero h2{font-size:clamp(28px,4vw,46px);line-height:1.08;letter-spacing:-.035em;margin:0 0 14px}
+#authHero>p{font-size:15px;line-height:1.7;color:var(--muted);max-width:62ch}
+#authHero .heroActions{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
+#authHero .miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:24px}
+#authHero .mini{padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+#authHero .mini b{display:block;margin-bottom:3px}
+#authHero .mini span{font-size:12px;line-height:1.55;color:var(--muted)}
+#authCard{padding:22px 24px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
 #auth h2{margin:0 0 4px;font-size:17px}
 #auth .lead{margin:0 0 18px;font-size:13px;color:var(--muted);line-height:1.6}
 #auth .f{margin-bottom:11px}
@@ -101,6 +122,10 @@ main{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
 #who{font:11px var(--mono);color:var(--muted)}
 #who b{color:var(--ink)}
 #syncState{font:11px var(--mono);color:var(--muted)}
+.demoBadge{font:700 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--info);border:1px solid var(--info);padding:4px 7px;border-radius:999px}
+.privacyBox{padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
+.privacyBox input[type="number"]{width:76px}
 .find{border-left:3px solid var(--line);padding:7px 0 7px 11px;margin:9px 0;font-size:13px;
   line-height:1.55}
 .find.error{border-left-color:var(--err)}
@@ -125,6 +150,9 @@ button.danger:hover:not(:disabled){background:var(--err);color:#fff}
 button:disabled{opacity:.38;cursor:not-allowed}
 button.chip{padding:6px 11px;border-radius:999px;font-size:12px}
 button.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.buttonLike{display:inline-block;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;
+  border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-decoration:none}
+.buttonLike:hover{border-color:var(--accent);color:var(--accent)}
 input,select{font:13px var(--mono);padding:6px 8px;border-radius:6px;
   border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
@@ -203,6 +231,13 @@ td.plus button{padding:1px 7px;font:700 13px/1.3 var(--mono);border-radius:5px}
 #map .camp{fill:var(--info)}
 #map .spoke{stroke:var(--line);stroke-width:1}
 footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted);max-width:1600px;margin:0 auto}
+@media (max-width:760px){
+  #auth{grid-template-columns:1fr;margin:18px auto;gap:12px;padding:0 14px}
+  #authHero{padding:10px 2px}
+  #authHero .miniGrid{grid-template-columns:1fr}
+  #nav{flex-wrap:nowrap;overflow-x:auto}
+  #nav button{white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -239,9 +274,31 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
 </div>
 
 <div id="auth" class="hidden">
+  <section id="authHero">
+    <span class="demoBadge">Field radio toolkit</span>
+    <h2>Program the radio.<br>Prove where it works.</h2>
+    <p>A browser-based programmer and controller for VGC and other Benshi-protocol radios.
+    Build channel groups, compare them with the radio, configure APRS, and turn a drive into
+    an honest receive-coverage map. The radio link is direct Web Bluetooth—no native app.</p>
+    <div class="heroActions">
+      <button id="btnDemo" class="primary">Explore the demo</button>
+      <a href="#publicHow" class="buttonLike">What you need</a>
+    </div>
+    <div class="miniGrid" id="publicHow">
+      <div class="mini"><b>Works with the radio</b><span>VR-N76, VR-N7500/7600, UV-Pro,
+        GA-5WB and compatible Benshi-protocol models.</span></div>
+      <div class="mini"><b>Chrome or Edge</b><span>Web Bluetooth works on desktop and
+        Android Chromium browsers. It is unavailable on iPhone and iPad.</span></div>
+      <div class="mini"><b>Offline in the field</b><span>Install the app once and the channel
+        tools keep loading without signal. Model-assisted list review still needs a connection.</span></div>
+      <div class="mini"><b>Private by design</b><span>Channels and layouts stay on the device.
+        Coverage sync is account-private, and optional privacy zones omit sensitive positions.</span></div>
+    </div>
+  </section>
+
+  <section id="authCard">
   <h2>N7WGP radio programmer</h2>
-  <p class="lead">This one is <b>invite only</b> — accounts are handed out rather than
-  self-served. Sign in, or redeem a code if you were given one.</p>
+  <p class="lead">Accounts are invite only. Sign in, redeem a code, or explore the read-only demo.</p>
 
   <div class="tabs">
     <button id="tabLogin" class="on">Sign in</button>
@@ -270,6 +327,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   <p class="lead" style="margin:18px 0 0;font-size:12px">Your coverage logs are stored against your
   account so they follow you between devices. Once you have signed in on a device it keeps working
   <b>offline</b> — the field is exactly where there is no signal.</p>
+  </section>
 </div>
 
 <main id="app" class="hidden">
@@ -402,8 +460,8 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
         <p><b>KISS</b> is a dead-simple framing protocol so a computer can talk to a TNC without
         knowing anything radio-specific — it just gets raw packet bytes in and out. This app talks
         to the radio's TNC the same way, over the same Bluetooth link already used for everything
-        else on this page (not a separate Bluetooth connection). Sending packets isn't built yet —
-        see <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a> item 2; receiving already shows up in the
+        else on this page (not a separate Bluetooth connection). The experimental terminal below
+        sends raw payload bytes; receiving shows up in the
         <b>Protocol log</b> page as <code>packet in…</code>, and — if the coverage log is
         running — as a row there too, with your position attached.
         <a href="#" data-go="guide" data-anchor="g-packet">The full APRS / packet walkthrough is in
@@ -420,13 +478,10 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       </div>
     </details>
     <p class="note" style="margin-top:10px">
-      <b>Not covered by this panel yet:</b> the digipeater <b>Path</b> (e.g. <code>WIDE1-1</code>,
-      via <code>SET_APRS_PATH</code>/<code>GET_APRS_PATH</code> — decoded, just not wired into this
-      UI yet) and which RF <b>channel</b> carries packet data (part of general radio settings, a
+      <b>Still set elsewhere:</b> which RF <b>channel</b> carries packet data (part of general radio settings, a
       separate not-yet-built page — see
       <a href="https://github.com/jasonhuber/vgc-radio/blob/main/PLAN.md" target="_blank" rel="noopener">PLAN.md</a>).
-      Set those from the radio's own screen or the VGC phone app for now:
-      <b>Menu → General Settings → APRS Settings → Path</b>, and
+      Set it from the radio's own screen or the VGC phone app for now:
       <b>Menu → General Settings → Digital Mode → Digital Channel</b>.
     </p>
     <div class="row" style="margin:12px 0 10px">
@@ -458,9 +513,31 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <div class="f"><label>Max forward hops (0–15)</label><input id="b_maxfwd" type="number" min="0" max="15"></div>
       <div class="f"><label>Time to live (0–15)</label><input id="b_ttl" type="number" min="0" max="15"></div>
     </div>
-    <p class="note" id="bssNote">Not yet round-tripped against real hardware — <b>Read from radio</b>
-    first, check the values look sane, then <b>Write to radio</b>. If a write fails, the protocol
-    <b>Protocol log</b> page will show the radio's actual error status.</p>
+    <div class="row" style="margin:14px 0 8px">
+      <div class="f" style="min-width:240px"><label for="b_path">APRS digipeater path</label>
+        <input id="b_path" maxlength="40" placeholder="WIDE1-1,WIDE2-1"></div>
+      <button id="btnReadPath" disabled>Read path</button>
+      <button id="btnWritePath" class="danger" disabled>Write path</button>
+      <span class="dim">Read back automatically after writing.</span>
+    </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+      <h2 style="margin-bottom:8px">Packet terminal — experimental transmit</h2>
+      <p class="note" style="margin:0 0 9px">Sends raw TNC payload bytes through
+      <code>HT_SEND_DATA</code>. Text mode sends UTF-8 text; hex mode sends an already-built AX.25
+      frame. The radio and frequency must already be configured correctly. Transmit only where
+      licensed, identify as required, and listen before sending.</p>
+      <div class="row">
+        <select id="tncMode"><option value="text">UTF-8 text</option><option value="hex">Hex bytes</option></select>
+        <input id="tncData" maxlength="600" style="min-width:min(100%,460px);flex:1"
+          placeholder="Packet payload, or hex like 82 A0 A4 A6 40 40…">
+        <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">channel
+          <input id="tncChannel" type="number" min="1" max="255" style="width:68px" placeholder="auto"></label>
+        <button id="btnSendPacket" class="danger" disabled>Transmit packet…</button>
+      </div>
+      <p id="tncState" class="note"></p>
+    </div>
+    <p class="note" id="bssNote">Read the current values first so unedited radio fields survive.
+    Every write asks for an explicit confirmation and reports the radio's reply in the Protocol log.</p>
   </div>
 
   <div class="panel" id="pCoverage">
@@ -472,6 +549,30 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <a href="#guide" data-go="guide" data-anchor="g-coverage">How to use this, and what it can't do →</a></p>
 
     <div id="cov"></div>
+
+    <div class="row" style="margin:11px 0 8px">
+      <div class="f" style="min-width:240px"><label for="covAntenna">Antenna for the next session</label>
+        <input id="covAntenna" maxlength="60" list="antennaChoices" placeholder="e.g. Signal Stick"></div>
+      <datalist id="antennaChoices"><option value="Stock rubber duck"><option value="Signal Stick">
+        <option value="Mag-mount mobile"><option value="Roll-up J-pole"><option value="Base antenna"></datalist>
+      <span class="note">Saved with the session so runs can be compared later.</span>
+    </div>
+
+    <details class="privacyBox" id="covPrivacyBox">
+      <summary style="cursor:pointer;font-weight:650">Privacy zone</summary>
+      <p class="note">When enabled, new receptions inside the radius keep their time and signal but
+      omit coordinates, and breadcrumbs inside the zone are not stored or synced. The zone center
+      itself stays only in this browser.</p>
+      <div class="row">
+        <label class="row" style="gap:5px"><input id="covPrivacyOn" type="checkbox" style="width:auto">
+          protect positions near this location</label>
+        <label class="row" style="gap:5px">radius
+          <input id="covPrivacyRadius" type="number" min="0.05" max="25" step="0.05" value="0.25"> mi</label>
+        <button id="btnPrivacyHere">Use my current location</button>
+        <button id="btnPrivacyRedact" class="danger">Redact saved log…</button>
+        <span id="covPrivacyState" class="dim"></span>
+      </div>
+    </details>
 
     <div class="row" style="margin:11px 0 10px">
       <button id="btnCovStart" class="primary">Start a session</button>
@@ -552,6 +653,8 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <div class="row" style="margin-bottom:10px">
       <button id="btnReadGroupNames" disabled>Read group names from radio</button>
       <button id="btnRenameGroup" disabled>Rename this group…</button>
+      <button id="btnRestoreGroup" class="danger" disabled>Restore last backup…</button>
+      <button id="btnExportBackups">Download backups</button>
       <span class="dim" id="grpNameCur"></span>
     </div>
     <div class="row" style="margin-bottom:10px;font-size:12px;color:var(--muted)">
@@ -569,6 +672,9 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <button id="btnWriteAllGroups" class="danger" disabled>Write every group → radio</button>
     </div>
     <div id="slots"></div>
+    <p class="note">Before a group write, the app reads and saves that radio group automatically.
+    Restoring the latest backup writes the exact saved channels back. You must type the destination
+    group number before either operation begins.</p>
     <p class="note">Click a slot to target it, then press <b>+</b> on a channel below to place it
     there. A channel may appear in as many groups and slots as you like. Slot numbers are the
     radio's memory positions.</p>
@@ -641,7 +747,9 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <button id="btnReadOne" disabled>Read this channel from radio</button>
     </div>
     <p class="note">Tone syntax: <kbd>88.5</kbd> CTCSS · <kbd>D023</kbd> DCS · empty = none.
-    TX and RX are independent, so odd splits just work.</p>
+    TX and RX are independent, so odd splits just work. Direct radio read/write uses the selected
+    radio group and treats Channel # as a zero-based radio slot (so 0 means slot 1). A direct write
+    backs up the entire selected group and requires its exact group:slot destination.</p>
   </div>
 
   <div class="panel" id="pGuide">
@@ -669,11 +777,14 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     browser will work. Firefox does not implement it either, on any platform. The channel
     library, the map and CSV import/export still work in those browsers; only the radio link
     is missing.</div>
-    <p>Nothing installs, and once you have signed in the page works offline. Your <b>channel
+    <p>The site can be installed as an offline app, and once you have signed in it keeps loading in
+    the field without a network connection. Your <b>channel
     library and group layout are local to this browser</b> — clearing site data clears them, so
     export a CSV if you care about them. Your <b>coverage log is different</b>: it is held locally
     <i>and</i> synced to your account on the server, positions included, so it survives a cleared
-    browser or a lost phone. It is visible only to you; nothing about it is shared or published.
+    browser or a lost phone. Privacy-zone coordinates stay only in this browser; new points inside
+    the zone omit their position before storage or sync. The log is visible only to you; nothing
+    about it is shared or published.
     If you would rather it never left the device, do not press Sync and do not end a session while
     online — a finished session uploads itself.</p>
 
@@ -784,11 +895,11 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <p><b>By channel</b> summarises what you heard and how far from the QTH you were when you
     heard it. <b>Every reception</b> is the raw list. <b>Export CSV</b> is for a spreadsheet;
     <b>Export GeoJSON</b> drops straight into any mapping tool that reads it. Both include
-    latitude, longitude and GPS accuracy per row. Ticking <b>plot on the map</b> draws the points
+    latitude, longitude and GPS accuracy per row unless a privacy zone redacted them. Ticking <b>plot on the map</b> draws the points
     onto the repeater map below, coloured by signal strength.</p>
-    <p>The log is capped at 5000 receptions and 8000 breadcrumbs, and lives in this browser only.
-    It survives a reload; it does not survive clearing site data. Export before a long trip's data
-    matters to you. Exports cover whatever the session dropdown is showing — the GeoJSON carries
+    <p>The local log is capped at 5000 receptions and 8000 breadcrumbs and also syncs to your
+    account. It survives a reload; the synced copy survives clearing site data. Export before a
+    long trip's data matters to you. Exports cover whatever the session dropdown is showing — the GeoJSON carries
     the receptions as points and each session's track as a LineString.</p>
     <h4>What it can't do — read this before trusting the numbers</h4>
     <ul>
@@ -859,18 +970,16 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     running, each packet also becomes a row in it with your position attached.</p>
     <p>What you'll see is the raw frame, not a parsed message — AX.25 and APRS decoding on top of
     it isn't built yet. You can usually read callsigns straight out of the ASCII.</p>
-    <h4>Transmitting packets — not built yet</h4>
-    <p>The command is understood (<code>HT_SEND_DATA</code>, with the same fragment framing the
-    receive side already decodes) and it's the next thing on the list, but sending is not wired
-    up in this page. Beacons configured above still transmit — those come from the radio itself
-    on its own timer. What's missing is typing a packet here and having it go out.</p>
+    <h4>Transmitting packets — experimental</h4>
+    <p>The terminal sends raw payload bytes with <code>HT_SEND_DATA</code>, fragments them, and waits
+    for each radio acknowledgement before sending the next. It does not build AX.25 or APRS packets
+    yet: text mode is useful for compatible experiments; hex mode expects an already-built frame.
+    The page blocks a send while the radio reports TX, RX or open squelch and requires typing
+    <code>TRANSMIT</code>. Licensing, identification and channel selection remain the operator's job.</p>
 
     <h3 id="g-radiomenu">What still has to be set on the radio itself</h3>
-    <p>Two settings matter for packet and neither is reachable from this page yet:</p>
+    <p>One setting still matters for packet and is not reachable from this page yet:</p>
     <ul>
-      <li><b>Digipeater path</b> — usually <code>WIDE1-1</code>, which asks one nearby digipeater
-      to repeat you. <b>Menu → General Settings → APRS Settings → Path</b>. The commands for this
-      are decoded and it's a small job to add; it just isn't in this UI yet.</li>
       <li><b>Which RF channel carries packet data</b> — <b>Menu → General Settings → Digital Mode
       → Digital Channel</b>. In North America APRS lives on <b>144.390 MHz</b>. Part of the
       general radio settings page, which isn't built.</li>
@@ -943,8 +1052,9 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   (Apache-2.0).
   Radio control runs entirely in your browser — channels, groups and the CSV never leave
   this page. Your <b>coverage log is stored on the server against your account</b> so it
-  follows you between devices; that includes the positions it records. Nothing else is
-  uploaded, and nothing is shared with anyone else.<br>
+  follows you between devices; that includes recorded positions except those omitted by an
+  enabled privacy zone. The zone center stays only in this browser. Nothing else is uploaded,
+  and nothing is shared with anyone else.<br>
   Not affiliated with VGC / Vero Telecom. Writing bad values to a radio is your
   responsibility. Transmit only where you are licensed.
 </footer>
@@ -971,7 +1081,8 @@ const GROUP_BASIC = 2;
 const CMD = { READ_STATUS:5, REGISTER_NOTIFICATION:6, EVENT_NOTIFICATION:9,
               GET_DEV_INFO:4, READ_RF_CH:13, WRITE_RF_CH:14, GET_HT_STATUS:20,
               HT_SEND_DATA:31, READ_BSS_SETTINGS:33, WRITE_BSS_SETTINGS:34,
-              WRITE_REGION_NAME:59, SET_REGION:60, READ_REGION_NAME:73 };
+              WRITE_REGION_NAME:59, SET_REGION:60, SET_APRS_PATH:71,
+              GET_APRS_PATH:72, READ_REGION_NAME:73 };
 const EVENT = { HT_STATUS_CHANGED:1, DATA_RXD:2, HT_CH_CHANGED:5,
                 HT_SETTINGS_CHANGED:6, BSS_SETTINGS_CHANGED:11 };
 const POWER = { BATTERY_LEVEL:1, BATTERY_VOLTAGE:2, BATTERY_PERCENT:4 };
@@ -989,6 +1100,7 @@ class BitW {
     for (let i=0;i<Math.min(s.length,bytes);i++) out[i] = s.charCodeAt(i)&0xff;
     for (const byte of out) this.int(byte,8);
   }
+  raw(bytes){ for (const byte of bytes) this.int(byte,8); }
   bytes(){
     if (this.b.length % 8) throw new Error("bit length not byte aligned: "+this.b.length);
     const out = new Uint8Array(this.b.length/8);
@@ -1006,6 +1118,7 @@ class BitR {
     return s.replace(/\0+$/,"").trim();
   }
   get remainingBits(){ return this.u8.length*8 - this.p; }
+  bytes(n){ const out=new Uint8Array(n); for(let i=0;i<n;i++) out[i]=this.int(8); return out; }
 }
 
 /* ---------- sub-audio (CTCSS / DCS) ----------
@@ -1152,6 +1265,24 @@ function encodeBssSettings(s, w){
   w.str(s.aprs_symbol||"", 2);
   w.str((s.aprs_callsign||"").toUpperCase(), 6);
   if (s._extended) w.int(s.bss_user_id_upper||0, 32);
+}
+
+/* ---------- TNC fragment ----------
+   control byte = final:1 | with_channel_id:1 | fragment_id:6, followed by
+   data and an optional trailing channel id. */
+function encodeTncFragment({ final, fragmentId, data, channelId=null }){
+  const w = new BitW();
+  w.bool(!!final); w.bool(channelId != null); w.int(fragmentId & 63, 6);
+  w.raw(data || new Uint8Array());
+  if (channelId != null) w.int(channelId,8);
+  return w.bytes();
+}
+function decodeTncFragment(r){
+  const final = r.bool(), withChannel = r.bool(), fragmentId = r.int(6);
+  const n = Math.max(0, Math.floor((r.remainingBits - (withChannel ? 8 : 0))/8));
+  const data = r.bytes(n);
+  const channelId = withChannel ? r.int(8) : null;
+  return { final, fragmentId, data, channelId };
 }
 
 /* ---------- message framing ---------- */
@@ -1333,7 +1464,7 @@ async function connect(showAll){
 
 function setConnectedUI(on){
   ["btnDisconnect","btnReadAll","btnWriteOne","btnReadOne","btnProbe","btnReadBss","btnWriteBss",
-   "btnReadGroupNames","btnRenameGroup"]
+   "btnReadGroupNames","btnRenameGroup","btnReadPath","btnWritePath","btnSendPacket"]
     .forEach(id => document.getElementById(id).disabled = !on);
   document.getElementById("btnConnect").disabled = on;
   const hc = document.getElementById("hdrConnect");
@@ -1375,6 +1506,7 @@ function onNotify(ev){
   if (p){ radio.pending.delete(m.command); p.resolve(m); }
 }
 
+let tncRx = null;
 function handleEvent(m){
   const type = m.r.int(8);
   switch (type){
@@ -1390,14 +1522,22 @@ function handleEvent(m){
       break;
     }
     case EVENT.DATA_RXD: {
-      const final = m.r.bool(), withCh = m.r.bool(), frag = m.r.int(6);
-      const nbytes = Math.floor((m.r.remainingBits - (withCh ? 8 : 0)) / 8);
-      const bytes = [];
-      for (let i=0;i<nbytes;i++) bytes.push(m.r.int(8));
-      const ch = withCh ? m.r.int(8) : null;
-      const txt = bytes.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
-      log(`packet in${ch!=null?` (ch ${ch+1})`:""} frag ${frag}${final?" final":""}: ${txt}`, "l-rx");
-      covPacket(txt, ch);
+      const f = decodeTncFragment(m.r);
+      const printable = Array.from(f.data).map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
+      log(`packet in${f.channelId!=null?` (ch ${f.channelId+1})`:""} frag ${f.fragmentId}` +
+          `${f.final?" final":""}: ${printable}`, "l-rx");
+      if (f.fragmentId === 0) tncRx = { next:1, bytes:Array.from(f.data), channelId:f.channelId };
+      else if (tncRx && f.fragmentId === tncRx.next){
+        tncRx.bytes.push(...f.data); tncRx.next++;
+        if (f.channelId != null) tncRx.channelId = f.channelId;
+      } else tncRx = null;
+      if (f.final && tncRx){
+        const text = new TextDecoder().decode(new Uint8Array(tncRx.bytes));
+        covPacket(text, tncRx.channelId);
+        const state = document.getElementById("tncState");
+        if (state) state.textContent = `Last received: ${text || "("+tncRx.bytes.length+" binary bytes)"}`;
+        tncRx = null;
+      }
       break;
     }
     case EVENT.HT_SETTINGS_CHANGED: log("radio settings changed", "l-inf"); break;
@@ -1517,7 +1657,7 @@ async function readAllRegionNames(){
 
 async function probeRegions(){
   if (!devInfo){ log("read device info first", "l-err"); return; }
-  const n = Math.max(1, devInfo.region_count);
+  const n = GROUPS();
   log(`probing ${n} groups — read-only, nothing is written`, "l-inf");
   const found = [];
   for (let g = 0; g < n; g++){
@@ -1740,6 +1880,57 @@ function formToBss(){
   bssSettings.allow_position_check = c("b_poscheck");
 }
 
+/* ---------- APRS path + raw TNC transmit ---------- */
+let aprsPath = "";
+async function readAprsPath(){
+  const m = await request(CMD.GET_APRS_PATH, buildMessage(CMD.GET_APRS_PATH));
+  const st = m.r.int(8);
+  if (st !== 0) throw new Error(`APRS path: ${REPLY_STATUS[st]||st}`);
+  aprsPath = new TextDecoder().decode(m.r.bytes(Math.floor(m.r.remainingBits/8))).replace(/\0+$/g,"").trim();
+  document.getElementById("b_path").value = aprsPath;
+  log(`APRS path read — ${aprsPath || "(direct)"}`, "l-rx");
+  return aprsPath;
+}
+async function writeAprsPath(){
+  const path = document.getElementById("b_path").value.trim().toUpperCase();
+  const bytes = new TextEncoder().encode(path);
+  if (bytes.length > 40) throw new Error("APRS path is longer than 40 UTF-8 bytes");
+  const m = await request(CMD.SET_APRS_PATH,
+    buildMessage(CMD.SET_APRS_PATH, w => w.raw(bytes)));
+  const st = m.r.remainingBits >= 8 ? m.r.int(8) : 0;
+  if (st !== 0) throw new Error(`write APRS path: ${REPLY_STATUS[st]||st}`);
+  aprsPath = path;
+  await readAprsPath();
+  log("APRS path written and verified", "l-rx");
+}
+
+function packetInputBytes(){
+  const mode = document.getElementById("tncMode").value;
+  const value = document.getElementById("tncData").value.trim();
+  if (!value) throw new Error("enter a packet payload first");
+  if (mode === "text") return new TextEncoder().encode(value);
+  const clean = value.replace(/0x/gi,"").replace(/[^0-9a-f]/gi,"");
+  if (!clean || clean.length % 2) throw new Error("hex mode needs complete byte pairs");
+  return new Uint8Array(clean.match(/../g).map(x => parseInt(x,16)));
+}
+async function sendTncData(data, channelId=null){
+  if (data.length > 256) throw new Error("packet payload is capped at 256 bytes");
+  if (liveStatus && (liveStatus.in_tx || liveStatus.in_rx || liveStatus.sq_open))
+    throw new Error("channel is busy — wait until TX/RX/SQ are clear");
+  const maxData = 40;
+  const count = Math.max(1, Math.ceil(data.length/maxData));
+  if (count > 64) throw new Error("packet needs more than 64 fragments");
+  for (let id=0; id<count; id++){
+    const part = data.slice(id*maxData, (id+1)*maxData);
+    const body = encodeTncFragment({ final:id===count-1, fragmentId:id, data:part, channelId });
+    const m = await request(CMD.HT_SEND_DATA, buildMessage(CMD.HT_SEND_DATA, w => w.raw(body)), 12000);
+    const st = m.r.remainingBits >= 8 ? m.r.int(8) : 0;
+    if (st !== 0) throw new Error(`packet fragment ${id}: ${REPLY_STATUS[st]||st}`);
+    document.getElementById("tncState").textContent = `Sent fragment ${id+1} of ${count}…`;
+  }
+  return count;
+}
+
 /* ==LIBRARY-START== generated by build-library.mjs -- do not hand-edit */
 const LIB_GROUPS = {"simplex":"Simplex","metro":"Phoenix Metro","travel":"Rim Country (travel)","gmrs":"GMRS / FRS","sat":"Satellite"};
 const LIBRARY = [
@@ -1882,7 +2073,7 @@ const LIBRARY = [
 const LS_KEY = "n7wgp.vrn76.library.v1";
 
 let library = [];              // working copy, editable
-let onRadio = new Map();       // channel_id -> decoded channel from the radio
+let onRadio = new Map();       // group index -> Map(slot index -> decoded channel)
 let filter = "all";
 let selected = null;
 
@@ -1929,6 +2120,7 @@ function loadLibrary(){
   log(`built-in library loaded (${library.length} channels)`);
 }
 function saveLibrary(){
+  if (demoMode) return;
   try { localStorage.setItem(LS_KEY, JSON.stringify(library)); }
   catch(e){ log("could not save library locally: "+e.message, "l-err"); }
 }
@@ -1964,6 +2156,7 @@ function groupSlots(g){
   return layout[g];
 }
 function saveLayout(){
+  if (demoMode) return;
   try { localStorage.setItem(LS_LAYOUT, JSON.stringify(layout)); }
   catch(e){ log("could not save layout: "+e.message, "l-err"); }
 }
@@ -2061,6 +2254,7 @@ function renderLayout(){
   document.getElementById("btnWriteLayout").disabled = !canWrite || !slots.some(Boolean);
   document.getElementById("btnWriteAllGroups").disabled =
     !canWrite || !Object.values(layout).some(a => a && a.some(Boolean));
+  renderRestoreState();
 }
 
 function assignToTarget(channel_id){
@@ -2310,7 +2504,9 @@ const cov = {
   sessions:[], rows:[], track:[],
   open:null, fix:null, geoId:null, wake:null, geoErr:null,
   lastHeard:0, idleMin:COV_IDLE_DEFAULT, idleTimer:null,
-  sel:"all"
+  sel:"all", antennaDefault:"",
+  privacy:{ enabled:false, lat:null, lon:null, radiusMi:.25 },
+  pendingDeletes:[], resetServer:false
 };
 
 function covLoad(){
@@ -2322,6 +2518,12 @@ function covLoad(){
       cov.rows     = Array.isArray(o.rows)     ? o.rows     : [];
       cov.track    = Array.isArray(o.track)    ? o.track    : [];
       if (o.idleMin) cov.idleMin = o.idleMin;
+      cov.antennaDefault = String(o.antennaDefault || "");
+      if (o.privacy && typeof o.privacy === "object")
+        cov.privacy = Object.assign(cov.privacy, o.privacy);
+      cov.pendingDeletes = Array.isArray(o.pendingDeletes) ? o.pendingDeletes.map(Number) : [];
+      cov.resetServer = !!o.resetServer;
+      cov.sessions.forEach(s => { if (!s.updated) s.updated = s.t1 || s.t0 || 0; });
       return;
     }
   } catch(e){ /* a corrupt log is not worth failing boot over */ }
@@ -2342,10 +2544,53 @@ function covLoad(){
   } catch(e){}
 }
 function covSave(){
+  if (demoMode) return;
   try {
     localStorage.setItem(LS_COV, JSON.stringify({
-      sessions:cov.sessions, rows:cov.rows, track:cov.track, idleMin:cov.idleMin }));
+      sessions:cov.sessions, rows:cov.rows, track:cov.track, idleMin:cov.idleMin,
+      antennaDefault:cov.antennaDefault, privacy:cov.privacy,
+      pendingDeletes:cov.pendingDeletes, resetServer:cov.resetServer }));
   } catch(e){ log("coverage log could not be saved: "+e.message, "l-err"); }
+}
+
+function renderPrivacyState(){
+  const p = cov.privacy;
+  const on = document.getElementById("covPrivacyOn");
+  const radius = document.getElementById("covPrivacyRadius");
+  const state = document.getElementById("covPrivacyState");
+  if (!on || !radius || !state) return;
+  on.checked = !!p.enabled;
+  radius.value = Math.max(.05, Number(p.radiusMi)||.25);
+  state.textContent = p.lat == null ? "center not set" :
+    `center saved locally · ${Number(p.radiusMi).toFixed(2)} mi radius`;
+}
+function setPrivacyHere(){
+  const finish = fix => {
+    cov.privacy.lat = fix.lat; cov.privacy.lon = fix.lon; cov.privacy.enabled = true;
+    covSave(); renderPrivacyState(); log("privacy zone center saved in this browser", "l-rx");
+  };
+  if (cov.fix){ finish(cov.fix); return; }
+  if (!navigator.geolocation){ log("location is unavailable in this browser", "l-err"); return; }
+  navigator.geolocation.getCurrentPosition(
+    p => finish({lat:p.coords.latitude, lon:p.coords.longitude}),
+    e => log("privacy zone location: "+(e.message||e), "l-err"),
+    { enableHighAccuracy:true, timeout:20000 });
+}
+function redactSavedCoverage(){
+  const p = cov.privacy;
+  if (!p.enabled || p.lat == null){ log("set and enable a privacy zone first", "l-err"); return; }
+  const rows = cov.rows.filter(r => r.lat != null && covInsidePrivacy(r));
+  const tracks = cov.track.filter(t => covInsidePrivacy(t));
+  if (!rows.length && !tracks.length){ log("nothing saved inside the privacy zone"); return; }
+  if (!confirm(`Redact ${rows.length} reception position(s) and remove ${tracks.length} breadcrumb(s) ` +
+      `inside the privacy zone?\n\nThe server copy will be replaced at the next sync.`)) return;
+  rows.forEach(r => { r.lat=null; r.lon=null; r.acc=null; r.private=true; });
+  const remove = new Set(tracks.map(t => `${t.sid}|${t.t}`));
+  cov.track = cov.track.filter(t => !remove.has(`${t.sid}|${t.t}`));
+  cov.resetServer = true; cov.pendingDeletes = [];
+  covSave(); renderCoverage();
+  log(`privacy zone redacted ${rows.length} reception(s) and ${tracks.length} breadcrumb(s)`, "l-rx");
+  if (auth.token) syncPush().catch(()=>{});
 }
 
 const covSessionById = id => cov.sessions.find(x => x.id === id) || null;
@@ -2360,7 +2605,19 @@ function covSessionLabel(x){
                d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
   const dur = mins < 60 ? `${Math.max(1,Math.round(mins))} min` : `${(mins/60).toFixed(1)} hr`;
   return `${x.label ? x.label + " — " : ""}${when} · ${dur} · ${n} heard` +
+         (x.antenna ? ` · ${x.antenna}` : "") +
          (x.t1 ? "" : " · running");
+}
+
+function covInsidePrivacy(fix){
+  const p = cov.privacy;
+  return !!(fix && p.enabled && p.lat != null && p.lon != null &&
+    haversineMi([p.lat,p.lon],[fix.lat,fix.lon]) <= Math.max(.05, Number(p.radiusMi)||.25));
+}
+function covSafeFix(fix){
+  if (!fix) return { lat:null, lon:null, acc:null, private:false };
+  if (covInsidePrivacy(fix)) return { lat:null, lon:null, acc:null, private:true };
+  return { lat:fix.lat, lon:fix.lon, acc:Math.round(fix.acc), private:false };
 }
 
 /* Name/frequency for a hit. What the radio actually holds (from Read radio)
@@ -2397,13 +2654,13 @@ function covCloseOpen(){
   if (!o) return;
   const secs = (Date.now() - o.t0)/1000;
   if (secs < 0.4 && !o.n) return;             // squelch flutter, not a signal
+  const pos = covSafeFix(o.fix);
   covPush({
     kind:"rx", t:new Date(o.t0).toISOString(), secs:+secs.toFixed(1),
     g:o.g, ch:o.ch, name:o.name, rx:o.rx, scanning:o.scanning,
     rssi:o.n ? Math.round(o.rssiMax) : null,
     rssiAvg:o.n ? Math.round(o.rssiSum/o.n) : null, n:o.n,
-    lat:o.fix ? o.fix.lat : null, lon:o.fix ? o.fix.lon : null,
-    acc:o.fix ? Math.round(o.fix.acc) : null
+    lat:pos.lat, lon:pos.lon, acc:pos.acc, private:pos.private
   });
 }
 
@@ -2414,13 +2671,13 @@ function covPacket(text, ch){
   const g = liveStatus && liveStatus.region != null ? liveStatus.region : 0;
   const c = ch != null ? ch : (liveStatus && liveStatus.channel != null ? liveStatus.channel : 0);
   const info = covChannelInfo(g, c);
+  const pos = covSafeFix(cov.fix);
   covPush({
     kind:"packet", t:new Date().toISOString(), secs:0, g, ch:c,
     name:info.name, rx:info.rx, scanning:false,
     rssi: liveStatus && liveStatus.rssi != null ? Math.round(liveStatus.rssi) : null,
     rssiAvg:null, n:0, text:String(text).slice(0,140),
-    lat:cov.fix ? cov.fix.lat : null, lon:cov.fix ? cov.fix.lon : null,
-    acc:cov.fix ? Math.round(cov.fix.acc) : null
+    lat:pos.lat, lon:pos.lon, acc:pos.acc, private:pos.private
   });
 }
 
@@ -2438,6 +2695,7 @@ function covPush(row){
    vehicle. */
 function covBreadcrumb(){
   if (!cov.on || !cov.fix) return;
+  if (covInsidePrivacy(cov.fix)) return;
   const last = cov.track.length ? cov.track[cov.track.length-1] : null;
   const moved = !last || last.sid !== cov.sid ||
     haversineMi([last.lat,last.lon],[cov.fix.lat,cov.fix.lon]) > 0.0155 ||
@@ -2482,7 +2740,9 @@ async function covStart(){
   }
   const t0 = Date.now();
   cov.sid = t0;
-  cov.sessions.push({ id:t0, t0, t1:null, label:"" });
+  cov.antennaDefault = document.getElementById("covAntenna").value.trim().slice(0,60);
+  cov.sessions.push({ id:t0, t0, t1:null, label:"", antenna:cov.antennaDefault,
+                      radio:radio.device?.name || "", updated:t0 });
   cov.sel = t0;
   cov.on = true; cov.open = null; cov.geoErr = null; cov.lastHeard = t0;
   cov.geoId = navigator.geolocation.watchPosition(
@@ -2511,7 +2771,7 @@ function covStop(){
   if (!cov.on) return;
   covCloseOpen();
   const sess = covSessionById(cov.sid);
-  if (sess) sess.t1 = Date.now();
+  if (sess){ sess.t1 = Date.now(); sess.updated = sess.t1; }
   const sid = cov.sid;
   cov.on = false; cov.sid = null;
   covIdleClear();
@@ -2727,6 +2987,9 @@ function renderCoverage(){
   start.disabled = cov.on;
   document.getElementById("btnCovStop").disabled = !cov.on;
   document.getElementById("covIdle").value = cov.idleMin;
+  const ant = document.getElementById("covAntenna");
+  if (ant && document.activeElement !== ant) ant.value = cov.antennaDefault || "";
+  renderPrivacyState();
 
   const rows = covRows();
   const withFix = rows.filter(r => r.lat != null);
@@ -2745,7 +3008,10 @@ function renderCoverage(){
     `<span>total airtime <b>${secs<120 ? secs.toFixed(0)+" s" : (secs/60).toFixed(1)+" min"}</b></span>` +
     (miles > 0.05 ? `<span>travelled <b>${miles.toFixed(1)}</b> mi</span>` : "") +
     (rows.filter(r=>r.kind==="packet").length
-      ? `<span><b>${rows.filter(r=>r.kind==="packet").length}</b> packets</span>` : "");
+      ? `<span><b>${rows.filter(r=>r.kind==="packet").length}</b> packets</span>` : "") +
+    (() => { const names=[...new Set((cov.sel === "all" ? cov.sessions : [covSessionById(cov.sel)])
+      .filter(Boolean).map(s=>s.antenna).filter(Boolean))];
+      return names.length ? `<span>antenna <b>${esc(names.join(", "))}</b></span>` : ""; })();
 
   renderCovMap();
 
@@ -2789,8 +3055,8 @@ function renderCoverage(){
           `<td>${r.kind}</td><td class="num">${r.g+1}</td><td class="num">${r.ch+1}</td>` +
           `<td>${esc(r.name||"")}</td><td class="num">${r.secs ? r.secs.toFixed(1) : ""}</td>` +
           `<td class="num">${r.rssi != null ? `<span style="color:${rssiColor(r.rssi)}">${r.rssi}%</span>` : ""}</td>` +
-          `<td class="num">${r.lat != null ? r.lat.toFixed(5) : ""}</td>` +
-          `<td class="num">${r.lon != null ? r.lon.toFixed(5) : ""}</td>` +
+          `<td class="num">${r.private ? '<span class="dim">private</span>' : r.lat != null ? r.lat.toFixed(5) : ""}</td>` +
+          `<td class="num">${r.private ? '<span class="dim">private</span>' : r.lon != null ? r.lon.toFixed(5) : ""}</td>` +
           `<td class="num">${r.acc != null ? r.acc : ""}</td>` +
           `<td class="num">${mi != null ? mi.toFixed(1) : ""}</td>` +
           `<td>${esc(r.text||"")}</td></tr>`;
@@ -2810,19 +3076,20 @@ function renderCoverage(){
 }
 
 function covCsv(){
-  const head = ["session","session_label","time_iso","kind","group","channel","name","rx_mhz",
+  const head = ["session","session_label","antenna","radio","time_iso","kind","group","channel","name","rx_mhz",
                 "seconds","rssi_pct_max","rssi_pct_avg","samples","lat","lon","acc_m",
-                "mi_from_qth","scanning","text"];
+                "privacy_redacted","mi_from_qth","scanning","text"];
   const q = v => v == null ? "" : `"${String(v).replace(/"/g,'""')}"`;
   const lines = [head.join(",")];
   covRows().forEach(r => {
     const mi = covMi(r);
     const sess = covSessionById(r.sid);
-    lines.push([r.sid || "", q(sess ? covSessionLabel(sess) : ""), q(r.t), r.kind, r.g+1, r.ch+1,
+    lines.push([r.sid || "", q(sess ? covSessionLabel(sess) : ""), q(sess?.antenna||""),
+      q(sess?.radio||""), q(r.t), r.kind, r.g+1, r.ch+1,
       q(r.name||""), r.rx != null ? r.rx.toFixed(6) : "", r.secs != null ? r.secs : "",
       r.rssi != null ? r.rssi : "", r.rssiAvg != null ? r.rssiAvg : "", r.n||0,
       r.lat != null ? r.lat.toFixed(6) : "", r.lon != null ? r.lon.toFixed(6) : "",
-      r.acc != null ? r.acc : "", mi != null ? mi.toFixed(2) : "",
+      r.acc != null ? r.acc : "", r.private ? "1" : "0", mi != null ? mi.toFixed(2) : "",
       r.scanning ? "1" : "0", q(r.text||"")].join(","));
   });
   covDownload(lines.join("\n"), "text/csv", "csv");
@@ -2835,9 +3102,11 @@ function covGeoJson(){
   const feats = covRows().filter(r => r.lat != null).map(r => ({
     type:"Feature",
     geometry:{ type:"Point", coordinates:[+r.lon.toFixed(6), +r.lat.toFixed(6)] },
-    properties:{ session:r.sid, time:r.t, kind:r.kind, group:r.g+1, channel:r.ch+1,
+      properties:{ session:r.sid, time:r.t, kind:r.kind, group:r.g+1, channel:r.ch+1,
                  name:r.name||"", rx_mhz:r.rx, seconds:r.secs, rssi_pct:r.rssi,
                  rssi_pct_avg:r.rssiAvg, acc_m:r.acc,
+                 antenna:covSessionById(r.sid)?.antenna||"", radio:covSessionById(r.sid)?.radio||"",
+                 privacy_redacted:!!r.private,
                  mi_from_qth:covMi(r) != null ? +covMi(r).toFixed(2) : null, text:r.text||"" }
   }));
   const bySid = new Map();
@@ -2850,6 +3119,7 @@ function covGeoJson(){
       geometry:{ type:"LineString",
                  coordinates:seg.map(p => [+p.lon.toFixed(6), +p.lat.toFixed(6)]) },
       properties:{ session:sid, kind:"track", label:sess ? covSessionLabel(sess) : "",
+                   antenna:sess?.antenna||"", radio:sess?.radio||"",
                    points:seg.length }
     });
   }
@@ -3120,6 +3390,68 @@ function importCsv(text){
   log(`imported ${n} channels into the library — nothing written to the radio yet`);
 }
 
+/* ---------- radio write recovery ---------- */
+const LS_RADIO_BACKUPS = "n7wgp.vrn76.radio-backups.v1";
+let radioBackups = [];
+function loadRadioBackups(){
+  try { const x=JSON.parse(localStorage.getItem(LS_RADIO_BACKUPS)||"[]");
+        radioBackups=Array.isArray(x)?x:[]; } catch(e){ radioBackups=[]; }
+}
+function saveRadioBackups(){
+  radioBackups = radioBackups.slice(-12);
+  try { localStorage.setItem(LS_RADIO_BACKUPS, JSON.stringify(radioBackups)); } catch(e){}
+  renderRestoreState();
+}
+const latestRadioBackup = g => [...radioBackups].reverse().find(b => b.group===g) || null;
+function renderRestoreState(){
+  const b=document.getElementById("btnRestoreGroup");
+  if (!b) return;
+  const last=latestRadioBackup(curGroup);
+  b.disabled = !radio.connected || !last;
+  b.textContent = last ? `Restore group ${curGroup+1} backup…` : "Restore last backup…";
+}
+function confirmGroupDestination(g, verb="WRITE"){
+  const token=`${verb} ${g+1}`;
+  return prompt(`Radio group ${g+1} will be changed.\n\nType ${token} to continue:`) === token;
+}
+async function captureRadioGroup(g, reason="Before write"){
+  if (GROUPS()>1) await setRegion(g);
+  const channels=[];
+  log(`backing up radio group ${g+1} before writing…`);
+  for (let i=0;i<SLOTS();i++) channels.push(await readChannel(i));
+  let name="", groupNameRead=false;
+  try { name=await readRegionName(g); groupNameRead=true; } catch(e){}
+  const b={ version:1, id:Date.now(), time:new Date().toISOString(), reason,
+            device:radio.device?.name||"", firmware:devInfo?.soft_ver||null,
+            group:g, groupName:name, groupNameRead, channels };
+  radioBackups.push(b); saveRadioBackups();
+  log(`backup saved — group ${g+1}, ${channels.length} slots`, "l-rx");
+  return b;
+}
+async function restoreRadioGroup(){
+  const target=latestRadioBackup(curGroup);
+  if (!target) throw new Error(`no saved backup for group ${curGroup+1}`);
+  if (!confirmGroupDestination(curGroup,"RESTORE")) return;
+  await captureRadioGroup(curGroup,"Before restore");
+  if (GROUPS()>1) await setRegion(curGroup);
+  let ok=0;
+  for (const c of target.channels){ await writeChannel(c); ok++; }
+  if (target.groupNameRead){
+    try { await writeRegionName(curGroup,target.groupName); } catch(e){ log(e.message,"l-err"); }
+  }
+  log(`restored group ${curGroup+1} from ${new Date(target.time).toLocaleString()} — ${ok} slots`, "l-rx");
+  await readAll();
+}
+function exportRadioBackups(){
+  if (!radioBackups.length){ log("no radio backups saved yet"); return; }
+  const blob=new Blob([JSON.stringify({ exported:new Date().toISOString(), backups:radioBackups },null,2)],
+                      {type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`N7WGP_radio_backups_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  log(`downloaded ${radioBackups.length} radio backup(s)`);
+}
+
 /* ---------- bulk radio ops ---------- */
 async function readAll(){
   const count = SLOTS();
@@ -3166,17 +3498,18 @@ function radioCapacity(){ return devInfo?.channel_count || null; }
 /* Writes one radio group from the layout. Slot index IS the channel_id sent
    to the radio, so a library channel numbered 72 can land in slot 3 of group
    1 -- the library number is only an identifier here, never a destination. */
-async function writeGroup(g, { confirmFirst = true } = {}){
+async function writeGroup(g, { confirmFirst = true, skipBackup = false } = {}){
   const slots = groupSlots(g);
   const items = slots.map((id, i) => ({ i, c: id == null ? null : libById(id) }))
                      .filter(x => x.c);
   if (!items.length){ log(`group ${g+1} is empty — nothing to write`); return { ok:0, bad:0 }; }
 
-  if (confirmFirst && !confirm(
-      `Write ${items.length} channel(s) into radio group ${g+1}?\n\n` +
-      items.slice(0,8).map(x => `  ${x.i+1}: ${x.c.name} ${x.c.rx_freq}`).join("\n") +
-      (items.length > 8 ? `\n  … and ${items.length-8} more` : "") +
-      `\n\nThis overwrites those slots.`)) return { ok:0, bad:0 };
+  if (confirmFirst && !confirmGroupDestination(g,"WRITE")) return { ok:0, bad:0 };
+
+  if (!skipBackup){
+    try { await captureRadioGroup(g); }
+    catch(e){ log(`write stopped — group ${g+1} backup failed: ${e.message}`, "l-err"); return {ok:0,bad:0}; }
+  }
 
   if (GROUPS() > 1){
     try { await setRegion(g); log(`switched to radio group ${g+1}`); }
@@ -3211,6 +3544,7 @@ async function writeGroup(g, { confirmFirst = true } = {}){
 const API = (location.protocol.startsWith("http") ? location.origin : "https://n7wgp.com") + "/api";
 const LS_AUTH = "n7wgp.vrn76.auth.v1";
 const auth = { token:null, user:null, online:true };
+let demoMode = false;
 
 function authLoad(){
   try {
@@ -3269,6 +3603,7 @@ function showAuth(){
   document.getElementById("btnSignOut").classList.add("hidden");
   document.getElementById("hdrConnect").classList.add("hidden");
   document.getElementById("who").textContent = "";
+  document.getElementById("btnSignOut").textContent = "Sign out";
 }
 
 function showApp(){
@@ -3277,13 +3612,48 @@ function showApp(){
   document.getElementById("nav").classList.remove("hidden");
   document.getElementById("foot").classList.remove("hidden");
   document.getElementById("btnSignOut").classList.remove("hidden");
-  document.getElementById("hdrConnect").classList.remove("hidden");
-  if (!(navigator.bluetooth && window.isSecureContext))
+  document.getElementById("btnSignOut").textContent = demoMode ? "Exit demo" : "Sign out";
+  document.getElementById("hdrConnect").classList.toggle("hidden", demoMode);
+  if (!demoMode && !(navigator.bluetooth && window.isSecureContext))
     document.getElementById("gate").classList.remove("hidden");
+  else document.getElementById("gate").classList.add("hidden");
   const u = auth.user || {};
-  document.getElementById("who").innerHTML =
+  document.getElementById("who").innerHTML = demoMode ? '<span class="demoBadge">demo data</span>' :
     `<b>${esc(u.callsign || u.email || "")}</b>` +
     (auth.online ? "" : ` <span style="color:var(--warn)">offline</span>`);
+}
+
+function startDemo(){
+  demoMode = true;
+  const now=Date.now(), sid=now-52*60000;
+  const pts=[
+    [33.2503,-111.8820],[33.265,-111.900],[33.282,-111.925],[33.300,-111.952],
+    [33.315,-111.978],[33.330,-112.005],[33.339,-112.040],[33.3387,-112.0662]
+  ];
+  cov.sessions=[{id:sid,t0:sid,t1:now-4*60000,label:"South Mountain loop",
+    antenna:"Signal Stick",radio:"VR-N76 demo",updated:now}];
+  cov.track=pts.map((p,i)=>({sid,t:sid+i*6*60000,lat:p[0],lon:p[1],acc:8}));
+  cov.rows=pts.slice(1).map((p,i)=>({sid,kind:"rx",t:new Date(sid+(i+1)*6*60000).toISOString(),
+    secs:2.4+i*.8,g:1,ch:i%4,name:["W7ARA","K7AWW","W7NAZ","K0NL"][i%4],
+    rx:[147.24,145.11,447.475,449.425][i%4],scanning:true,rssi:28+i*10,rssiAvg:24+i*9,n:3,
+    lat:p[0],lon:p[1],acc:8,private:false}));
+  cov.sel=sid; cov.antennaDefault="Signal Stick";
+  groupsOverride=6; slotsOverride=32; regionNames=["LOCAL","METRO","GMRS","TRAVEL","EVENTS","TEST"];
+  devInfo={region_count:6,channel_count:32,soft_ver:104,support_dmr:false,gmrs:false};
+  onRadio.clear();
+  for(let g=0;g<GROUPS();g++){
+    const m=new Map(); groupSlots(g).forEach((id,i)=>{ const c=id==null?null:libById(id); if(c)m.set(i,toRadio({...c,channel_id:i})); });
+    onRadio.set(g,m);
+  }
+  liveStatus={in_tx:false,in_rx:false,sq_open:false,scanning:true,gps_locked:true,rssi:53,region:1,channel:3};
+  liveBattery={pct:82,v:7.72};
+  showApp(); showView("start");
+  setStatus("demo", "on"); renderLive(); renderRows(); renderLayout(); renderCoverage();
+  ["btnConnect","btnConnectAny","btnDisconnect","btnReadAll","btnStartRead","btnProbe","btnReadBss","btnWriteBss",
+   "btnReadPath","btnWritePath","btnSendPacket","btnReadGroupNames","btnRenameGroup","btnRestoreGroup",
+   "btnWriteLayout","btnWriteAllGroups","btnWriteOne","btnReadOne","btnCovStart","btnCovStop",
+   "btnCovSync","btnCheckList","btnImport","btnReset","btnPrivacyHere","btnPrivacyRedact"].forEach(id=>{ const e=document.getElementById(id); if(e)e.disabled=true; });
+  log("demo opened — all radio, account and transmit actions are disabled", "l-inf");
 }
 
 /* ---------- coverage sync ---------- */
@@ -3297,10 +3667,24 @@ function renderSyncState(msg){
     : "not synced yet — press Sync now, or it goes up when a session ends";
 }
 
+async function flushCovDeletes(){
+  if (!auth.token) return;
+  if (cov.resetServer){
+    await api("/coverage?all=1", { method:"DELETE", timeoutMs:30000 });
+    cov.resetServer = false; cov.pendingDeletes = []; covSave();
+    return;
+  }
+  for (const sid of [...new Set(cov.pendingDeletes)]){
+    await api("/coverage?session="+encodeURIComponent(sid), { method:"DELETE", timeoutMs:30000 });
+    cov.pendingDeletes = cov.pendingDeletes.filter(x => x !== sid); covSave();
+  }
+}
+
 async function syncPush(){
-  if (!auth.token || syncBusy) return null;
+  if (!auth.token || syncBusy || demoMode) return null;
   syncBusy = true; renderSyncState("sending…");
   try {
+    await flushCovDeletes();
     const r = await api("/coverage", { method:"POST", timeoutMs:60000,
       body:{ sessions:cov.sessions, rows:cov.rows, track:cov.track } });
     lastSync = Date.now(); renderSyncState();
@@ -3314,10 +3698,15 @@ async function syncPush(){
 /* Merge rather than replace: the device may hold sessions the server has
    never seen, and the server may hold sessions from another device. */
 async function syncPull(){
-  if (!auth.token) return;
+  if (!auth.token || demoMode) return;
+  await flushCovDeletes();
   const r = await api("/coverage", { timeoutMs:60000 });
-  const haveS = new Set(cov.sessions.map(x => x.id));
-  (r.sessions || []).forEach(x => { if (!haveS.has(x.id)) cov.sessions.push(x); });
+  const localS = new Map(cov.sessions.map(x => [x.id,x]));
+  (r.sessions || []).forEach(x => {
+    const here = localS.get(x.id);
+    if (!here){ cov.sessions.push(x); return; }
+    if ((x.updated||0) > (here.updated||0)) Object.assign(here, x);
+  });
   const rk = z => `${z.sid}|${z.t}|${z.g}|${z.ch}|${z.kind}`;
   const haveR = new Set(cov.rows.map(rk));
   (r.rows || []).forEach(z => { if (!haveR.has(rk(z))) cov.rows.push(z); });
@@ -3511,12 +3900,14 @@ async function doRedeem(){
 }
 document.getElementById("btnLogin").onclick  = doLogin;
 document.getElementById("btnRedeem").onclick = doRedeem;
+document.getElementById("btnDemo").onclick = startDemo;
 ["a_email","a_pass"].forEach(id => document.getElementById(id)
   .addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); }));
 ["a_invite","a_email2","a_call","a_pass2"].forEach(id => document.getElementById(id)
   .addEventListener("keydown", e => { if (e.key === "Enter") doRedeem(); }));
 
 document.getElementById("btnSignOut").onclick = async () => {
+  if (demoMode){ location.href = location.pathname; return; }
   if (cov.on) covStop();
   /* Try to get anything unsynced up before the token goes away, but never
      hold a sign-out hostage to the network. */
@@ -3552,13 +3943,32 @@ document.getElementById("covIdle").onchange = e => {
   e.target.value = cov.idleMin;
   covSave(); renderCovState();
 };
+document.getElementById("covAntenna").onchange = e => {
+  cov.antennaDefault = e.target.value.trim().slice(0,60); covSave();
+};
+document.getElementById("covPrivacyOn").onchange = e => {
+  cov.privacy.enabled = e.target.checked;
+  if (cov.privacy.enabled && cov.privacy.lat == null){
+    cov.privacy.enabled = false; e.target.checked = false;
+    log("set the privacy-zone center first", "l-err");
+  }
+  covSave(); renderPrivacyState();
+};
+document.getElementById("covPrivacyRadius").onchange = e => {
+  cov.privacy.radiusMi = Math.max(.05, Math.min(25, Number(e.target.value)||.25));
+  covSave(); renderPrivacyState();
+};
+document.getElementById("btnPrivacyHere").onclick = setPrivacyHere;
+document.getElementById("btnPrivacyRedact").onclick = redactSavedCoverage;
 document.getElementById("btnCovRename").onclick = () => {
   const x = covSessionById(cov.sel);
   if (!x) return;
   const name = prompt("Name this session — where you drove, what you were testing:", x.label || "");
   if (name == null) return;
   x.label = name.trim().slice(0, 60);
+  x.updated = Date.now();
   covSave(); renderCoverage();
+  syncPush().catch(()=>{});
 };
 document.getElementById("btnCovDelete").onclick = () => {
   const x = covSessionById(cov.sel);
@@ -3569,9 +3979,11 @@ document.getElementById("btnCovDelete").onclick = () => {
   cov.sessions = cov.sessions.filter(y => y.id !== x.id);
   cov.rows  = cov.rows.filter(r => r.sid !== x.id);
   cov.track = cov.track.filter(p => p.sid !== x.id);
+  cov.pendingDeletes.push(x.id);
   cov.sel = "all";
   covSave(); renderCoverage();
   log(`deleted coverage session (${n} reception(s))`);
+  syncPush().catch(()=>{});
 };
 document.getElementById("btnCovClear").onclick = () => {
   if (!cov.rows.length && !cov.sessions.length) return;
@@ -3579,8 +3991,10 @@ document.getElementById("btnCovClear").onclick = () => {
                `Export first if you want them.`)) return;
   if (cov.on) covStop();
   cov.sessions = []; cov.rows = []; cov.track = []; cov.open = null; cov.sel = "all";
+  cov.resetServer = true; cov.pendingDeletes = [];
   covSave(); renderCoverage();
   log("coverage log cleared");
+  syncPush().catch(()=>{});
 };
 
 /* ---------- wiring ---------- */
@@ -3597,8 +4011,28 @@ document.getElementById("btnReadAll").onclick = () => readAll().catch(e=>log(e.m
 document.getElementById("btnProbe").onclick = () => probeRegions().catch(e=>log(e.message,"l-err"));
 document.getElementById("btnReadBss").onclick = () => readBssSettings().catch(e=>log(e.message,"l-err"));
 document.getElementById("btnWriteBss").onclick = () => {
-  if (!confirm("Write these APRS/BSS settings to the radio?")) return;
+  if (prompt("This writes every APRS/BSS field shown above.\n\nType WRITE APRS to continue:") !== "WRITE APRS") return;
   writeBssSettingsToRadio().catch(e=>log(e.message,"l-err"));
+};
+document.getElementById("btnReadPath").onclick = () =>
+  readAprsPath().catch(e=>log(e.message,"l-err"));
+document.getElementById("btnWritePath").onclick = () => {
+  if (prompt("This changes the radio's APRS digipeater path.\n\nType WRITE PATH to continue:") !== "WRITE PATH") return;
+  writeAprsPath().catch(e=>log(e.message,"l-err"));
+};
+document.getElementById("btnSendPacket").onclick = async () => {
+  const state=document.getElementById("tncState");
+  try {
+    const data=packetInputBytes();
+    const raw=document.getElementById("tncChannel").value;
+    const channel=raw === "" ? null : Math.max(0,Math.min(254,(parseInt(raw,10)||1)-1));
+    if (prompt(`Transmit ${data.length} raw packet byte(s)${channel!=null?` on channel ${channel+1}`:""}?\n\n` +
+               `Make sure the frequency is clear and you are licensed. Type TRANSMIT to continue:`) !== "TRANSMIT") return;
+    state.textContent="Waiting for radio acknowledgements…";
+    const fragments=await sendTncData(data,channel);
+    state.textContent=`Transmitted ${data.length} byte(s) in ${fragments} fragment(s).`;
+    log(`packet out — ${data.length} byte(s), ${fragments} fragment(s)`,"l-tx");
+  } catch(e){ state.textContent=e.message; log("packet send: "+e.message,"l-err"); }
 };
 
 document.getElementById("btnReadGroupNames").onclick = () =>
@@ -3621,17 +4055,34 @@ document.getElementById("btnApply").onclick = () => {
 };
 document.getElementById("btnWriteOne").onclick = async () => {
   const c = editorToChannel();
-  if (!confirm(`Write channel ${c.channel_id} "${c.name}" — RX ${c.rx_freq} / TX ${c.tx_freq} — to the radio?`)) return;
+  const slot = c.channel_id;
+  if (!Number.isInteger(slot) || slot < 0 || slot >= SLOTS()){
+    log(`radio slot must be 0–${SLOTS()-1} for this radio`, "l-err"); return;
+  }
+  const token = `WRITE ${curGroup+1}:${slot+1}`;
+  if (prompt(`Write "${c.name}" — RX ${c.rx_freq} / TX ${c.tx_freq} — to radio group ${curGroup+1}, slot ${slot+1}?\n\n` +
+             `The group will be backed up first. Type ${token} to continue:`) !== token) return;
   try {
+    await captureRadioGroup(curGroup, "Before one-slot write");
+    if (GROUPS()>1) await setRegion(curGroup);
     await writeChannel(toRadio(c));
-    log(`wrote ch ${c.channel_id}`, "l-rx");
-    onRadio.set(c.channel_id, await readChannel(c.channel_id));
+    log(`wrote group ${curGroup+1} slot ${slot+1}`, "l-rx");
+    const group = onRadio.get(curGroup) || new Map();
+    group.set(slot, await readChannel(slot)); onRadio.set(curGroup, group);
     renderRows();
   } catch(e){ log("write failed: "+e.message,"l-err"); }
 };
 document.getElementById("btnReadOne").onclick = async () => {
   const id = parseInt(document.getElementById("e_id").value,10);
-  try { onRadio.set(id, await readChannel(id)); renderRows(); log(`read ch ${id} from radio`, "l-rx"); }
+  if (!Number.isInteger(id) || id < 0 || id >= SLOTS()){
+    log(`radio slot must be 0–${SLOTS()-1} for this radio`, "l-err"); return;
+  }
+  try {
+    if (GROUPS()>1) await setRegion(curGroup);
+    const group = onRadio.get(curGroup) || new Map();
+    group.set(id, await readChannel(id)); onRadio.set(curGroup, group);
+    renderRows(); log(`read group ${curGroup+1} slot ${id+1} from radio`, "l-rx");
+  }
   catch(e){ log(e.message,"l-err"); }
 };
 
@@ -3688,8 +4139,9 @@ document.getElementById("btnWriteLayout").onclick = () =>
   writeGroup(curGroup).then(()=>readAll()).catch(e=>log(e.message,"l-err"));
 document.getElementById("btnWriteAllGroups").onclick = async () => {
   const gs = [...Array(GROUPS()).keys()].filter(g => groupSlots(g).some(Boolean));
-  if (!confirm(`Write ${gs.length} group(s) — ${gs.map(g=>g+1).join(", ")} — to the radio?\n\n` +
-               `This overwrites every slot listed in those groups.`)) return;
+  const token=`WRITE ALL ${gs.map(g=>g+1).join(",")}`;
+  if (prompt(`This will change radio groups ${gs.map(g=>g+1).join(", ")}. Each group will be backed up first.\n\n` +
+             `Type ${token} to continue:`) !== token) return;
   let ok = 0, bad = 0;
   for (const g of gs){
     const r = await writeGroup(g, { confirmFirst:false });
@@ -3698,6 +4150,9 @@ document.getElementById("btnWriteAllGroups").onclick = async () => {
   log(`all groups done — ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
   await readAll().catch(()=>{});
 };
+document.getElementById("btnRestoreGroup").onclick = () =>
+  restoreRadioGroup().catch(e=>log("restore failed: "+e.message,"l-err"));
+document.getElementById("btnExportBackups").onclick = exportRadioBackups;
 
 function setMapMode(m){
   mapMode = m;
@@ -3718,7 +4173,7 @@ let BRAVE = false;
 
   const ok = !!navigator.bluetooth && window.isSecureContext;
   authLoad();
-  loadLibrary(); loadLayout(); covLoad();
+  loadLibrary(); loadLayout(); covLoad(); loadRadioBackups();
   fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
   showView((location.hash || "").replace("#",""));
   renderCoverage();
@@ -3753,6 +4208,12 @@ let BRAVE = false;
     log("ready — Web Bluetooth available" + (BRAVE ? " (Brave detected)" : ""));
   }
 })();
+
+if ("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")
+    .then(() => log("offline app shell ready"))
+    .catch(e => log("offline setup: "+e.message,"l-err")));
+}
 </script>
 </body>
 </html>

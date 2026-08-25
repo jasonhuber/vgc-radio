@@ -34,16 +34,21 @@ total 192, so the sources agree on capacity and disagree on arrangement.
 - Reading channels back off the radio.
 - Writing channels — 31 written successfully in one pass, 2026-08-23.
 - Device info, including the capacity fields.
+- Owner report, 2026-08-24: the broader programmer works against this radio,
+  including multi-region operation. An incorrect region was accidentally
+  overwritten, which confirms the write path and prompted typed destination
+  confirmations plus automatic pre-write backups.
 
 ## Verified failing
 
 - Writing to any slot ≥ `channel_count` returns `INVALID_PARAMETER` per
   channel. The app now checks capacity first.
 
-## Untested
+## Still needs an exact result recorded
 
-- `SET_REGION` group switching (see `../PLAN.md`).
-- Live status strip, battery, event push — implemented, never seen real data.
+- StatusExt fields by firmware: RSSI, current region and upper channel bits.
+- APRS path read/write/read, raw TNC transmit fragmentation, and group-backup
+  restore from the 2026-08-24 safety pass.
 - DMR: this radio reports `support_dmr` false, so the plain 25-byte `RfCh`
   layout applies.
 

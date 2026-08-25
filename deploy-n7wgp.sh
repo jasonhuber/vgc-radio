@@ -11,9 +11,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ENV_FILE="$HOME/Library/CloudStorage/Dropbox/Personal/jasonhuber.com/llm-api/.env"
+ENV_FILE="${N7WGP_DEPLOY_ENV:-$HOME/Library/CloudStorage/Dropbox/Personal/jasonhuber.com/llm-api/.env}"
 [[ -f "$ENV_FILE" ]] || { echo "missing $ENV_FILE" >&2; exit 1; }
 [[ -f vgc-programmer.html ]] || { echo "vgc-programmer.html not found" >&2; exit 1; }
+for f in manifest.webmanifest radio-icon.svg og.png sw.js site.htaccess; do
+    [[ -f "$f" ]] || { echo "$f not found" >&2; exit 1; }
+done
 
 g(){ awk -v k="$1" -F= '$1==k { sub(/^[^=]*=/,""); print; exit }' "$ENV_FILE"; }
 H=$(g DEPLOY_SSH_HOST); U=$(g DEPLOY_SSH_USER); P=$(g DEPLOY_SSH_PORT)
@@ -26,6 +29,8 @@ REMOTE="domains/n7wgp.com/public_html"
 # published copy can never drift from the one the tests run against.
 mkdir -p public
 cp vgc-programmer.html public/index.html
+cp manifest.webmanifest radio-icon.svg og.png sw.js public/
+cp site.htaccess public/.htaccess
 echo "built public/index.html ($(wc -c < public/index.html | tr -d ' ') bytes)"
 
 RSYNC_FLAGS=(-az --human-readable --chmod=u=rwX,go=rX

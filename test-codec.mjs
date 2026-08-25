@@ -13,7 +13,8 @@ const src = html.slice(start, end);
 const mod = await import("data:text/javascript," + encodeURIComponent(
   src + "\nexport { BitW, BitR, decodeRfCh, encodeRfCh, buildMessage, parseMessage," +
         " subAudioDecode, subAudioEncode, toneToText, toneFromText, powerFromCsv, CMD," +
-        " decodeBssSettings, encodeBssSettings, BSS_BYTES, BSS_EXT_BYTES };"
+        " decodeBssSettings, encodeBssSettings, BSS_BYTES, BSS_EXT_BYTES," +
+        " encodeTncFragment, decodeTncFragment };"
 ));
 
 let pass = 0, fail = 0;
@@ -32,11 +33,20 @@ const readCh7 = mod.buildMessage(mod.CMD.READ_RF_CH, w => w.int(7, 8));
 eq(hex(readCh7), "00 02 00 0d 07", "READ_RF_CH ch7");
 const info = mod.buildMessage(mod.CMD.GET_DEV_INFO, w => w.int(3, 8));
 eq(hex(info), "00 02 00 04 03", "GET_DEV_INFO body literal 3");
+eq(hex(mod.buildMessage(mod.CMD.GET_APRS_PATH)), "00 02 00 48", "GET_APRS_PATH has no request body");
 
 // a synthetic reply: group=2, is_reply=1, cmd=13  -> byte2 bit7 set
 const replyHdr = new Uint8Array([0x00, 0x02, 0x80, 0x0d, 0x00]);
 const pm = mod.parseMessage(replyHdr);
 eq([pm.group, pm.isReply, pm.command], [2, true, 13], "reply header parses is_reply=1");
+
+console.log("\n— TNC fragmentation —");
+const tf = mod.encodeTncFragment({ final:true, fragmentId:2,
+  data:new Uint8Array([0x41,0x42,0x43]), channelId:7 });
+eq(hex(tf), "c2 41 42 43 07", "final TNC fragment with channel id");
+const tback = mod.decodeTncFragment(new mod.BitR(tf));
+eq({final:tback.final,fragmentId:tback.fragmentId,data:[...tback.data],channelId:tback.channelId},
+   {final:true,fragmentId:2,data:[65,66,67],channelId:7}, "TNC fragment round-trip");
 
 console.log("\n— sub-audio (CTCSS / DCS) —");
 eq(mod.subAudioEncode({ ctcss: 88.5 }), 8850, "CTCSS 88.5 -> 8850");

@@ -76,7 +76,7 @@ benlink on the region/group commands.
 | 60 | `SET_REGION` | index still **GUESS: u8**; **confirmed no reply at all** (HTCommander) |
 | 67 / 68 | `SET_MSG` / `GET_MSG` | |
 | 70 | `SET_TIME` | |
-| 71 / 72 | `SET`/`GET_APRS_PATH` | ✓ (HTCommander) — not yet implemented here, see PLAN.md |
+| 71 / 72 | `SET`/`GET_APRS_PATH` | ✓ (HTCommander) — implemented; writes are read back |
 | 73 | `READ_REGION_NAME` | ✓ (HTCommander) — see below |
 
 `ReplyStatus` (u8): `0 SUCCESS · 1 NOT_SUPPORTED · 2 NOT_AUTHENTICATED ·
@@ -218,7 +218,10 @@ data              : remainder (minus 8 bits if with_channel_id)
 channel_id        : u8, only if with_channel_id
 ```
 
-Transmit with `HT_SEND_DATA` (31); receive via the `DATA_RXD` event.
+Transmit with `HT_SEND_DATA` (31); receive via the `DATA_RXD` event. This app
+now fragments outgoing raw payloads at 40 data bytes, keeps exactly one fragment
+in flight until its acknowledgement arrives, and reassembles sequential incoming
+fragments. AX.25/APRS construction and parsing are deliberately a separate layer.
 
 ## `BSSSettings` — APRS config
 

@@ -1,8 +1,9 @@
 # VGC / Benshi radio control
 
 Browser-based programming and control for **VGC and other Benshi-protocol
-radios** over Bluetooth. One self-contained HTML file, no backend, no install,
-no network calls — it works offline in the field.
+radios** over Bluetooth. The front end is one self-contained HTML file plus an
+installable offline shell; the PHP/SQLite API provides invite-only accounts,
+private coverage sync and model-assisted list review.
 
 Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 
@@ -18,8 +19,11 @@ Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 | [`vgc-programmer.html`](vgc-programmer.html) | **The entire front end.** Source of truth |
 | [`radio-api/`](radio-api) | PHP + SQLite API: accounts, coverage sync, AI list review |
 | [`build-library.mjs`](build-library.mjs) | Master CSV → embedded channel library + site geocoding |
-| [`test-codec.mjs`](test-codec.mjs) | 57 offline protocol assertions |
+| [`test-codec.mjs`](test-codec.mjs) | 79 offline protocol assertions |
 | [`deploy-n7wgp.sh`](deploy-n7wgp.sh) | Publish to n7wgp.com |
+| `manifest.webmanifest`, `sw.js`, `radio-icon.svg` | Installable/offline app shell |
+| `site.htaccess` | Root security and cache headers, copied to `public/.htaccess` |
+| `og.png` | Public social-preview card |
 | [`radios/`](radios) | Per-radio capacity, quirks, test status |
 | `requirements.txt` | Recreates the benlink reference install (optional) |
 | `scan.py` | BLE scan probe — blocked by macOS TCC, kept as evidence |
@@ -36,12 +40,15 @@ Live at **<https://n7wgp.com>**. Built 2026-08-23 for N7WGP.
 | Repeater map, 80 sites geocoded, click to filter | built |
 | Built-in 125-channel library, 5 categories | built |
 | CHIRP CSV import/export | built |
-| Live status: TX/RX/SQ/scan/GPS, RSSI, battery, current group | built, unverified |
-| **Coverage log** — logs every squelch-open with channel, RSSI and GPS position; CSV/GeoJSON export, plots on the map | built, unverified |
+| Live status: TX/RX/SQ/scan/GPS, RSSI, battery, current group | working on owner hardware; exact results still need recording |
+| **Coverage log** — sessions, antenna/radio tags, privacy zone, GPS track, CSV/GeoJSON and map | working; new metadata/privacy controls need a field run |
 | On-page instructions, incl. a full APRS/BSS/TNC/KISS walkthrough | built |
-| Event push — reacts when you turn the knob | built, unverified |
-| APRS/BSS settings (callsign, beacon, share interval) | built, unverified on hardware |
-| Packet terminal (send), radio settings page | **not built** — see PLAN.md |
+| Event push — reacts when you turn the knob | working on owner hardware; exact results still need recording |
+| APRS/BSS settings plus digipeater path | built; path write needs a live read/write/read check |
+| Raw packet terminal (send/reassembly) | built, experimental, not yet transmitted from this version |
+| General radio settings page | **not built** — see PLAN.md |
+| Automatic pre-write group backup and restore | built; every group write requires typing its destination |
+| Installable PWA and public read-only demo | built |
 | Starting/stopping the radio's scan from the app | **not decoded** — no such command is known |
 | Accounts (invite only), coverage stored per account, cross-device sync | built |
 | "Check this list" — AI review of an imported channel list | built |
@@ -87,7 +94,7 @@ connection failure. The browser delegates bonding to the OS, so the OS prompt
 ## Working on it
 
 ```bash
-node test-codec.mjs                 # 57 assertions, run before every deploy
+node test-codec.mjs                 # 79 assertions, run before every deploy
 node build-library.mjs              # summary + sanity checks, writes nothing
 node build-library.mjs --write      # regenerate the embedded library from the CSV
 ./deploy-n7wgp.sh                   # dry run
@@ -105,10 +112,11 @@ answer 403.
 from it at deploy time so the published copy cannot drift, and `test-codec.mjs`
 extracts the protocol code straight out of the HTML for the same reason.
 
-Deploy is additive rsync (no `--delete`), dry-run by default, and verifies
-jasonhuber.com's `/llm`, `/track` and `/travels` afterwards. Hostinger
-credentials come from `../../jasonhuber.com/llm-api/.env` — n7wgp.com is an
-addon domain on the same account, with Cloudflare DNS in front.
+Deploy is additive rsync (no `--delete`), dry-run by default, and verifies the
+radio site plus related services afterwards. Hostinger
+credentials default to `../../jasonhuber.com/llm-api/.env` — n7wgp.com is an
+addon domain on the same account, with Cloudflare DNS in front. If that shared
+workspace moves, set `N7WGP_DEPLOY_ENV=/absolute/path/to/.env`.
 
 ## Credit
 

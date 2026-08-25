@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-08-24 (field-safety pass) — durable deletes, backups, antenna tags, privacy, demo and offline install
+
+- **Coverage sync deletions are now real.** Session/all deletion queues a local
+  tombstone, sends server deletes before the next pull, and survives being done
+  offline. Deleted sessions can no longer return on the next sync. Session
+  label/equipment changes carry a client timestamp so two devices resolve the
+  same session deterministically instead of whichever device pushed last.
+- **Coverage sessions record antenna and radio.** The antenna is chosen before
+  starting and appears in session labels, stats, CSV and GeoJSON, enabling later
+  setup comparisons.
+- **Added a local-only privacy zone.** New receptions inside it retain time,
+  channel and signal but omit coordinates; breadcrumbs inside it are skipped.
+  Existing logs can be redacted, which queues a complete sanitized server
+  replacement. The zone center itself is never uploaded.
+- **Made region writes recoverable.** Writing a group requires typing its exact
+  destination. Before the first channel is changed, every slot and the group
+  name are read into a local backup; an incomplete backup cancels the write.
+  The latest 12 can be downloaded, and the latest per-group backup can be
+  restored after a second typed confirmation. Bulk writes name every target.
+  The legacy one-channel editor now follows the same backup rule, identifies
+  the destination as group:slot, and updates the grouped comparison cache.
+- **Added APRS path controls and an experimental raw packet terminal.** Path
+  writes are read back for verification. TNC data fragments at 40 data bytes,
+  sends one at a time, waits for each acknowledgement, reassembles received
+  fragments, refuses to start while TX/RX/squelch is active, and requires the
+  operator to type `TRANSMIT`. AX.25/APRS composition remains a next step.
+- **Added a public landing page and read-only demo** with realistic synthetic
+  radio/coverage data. All radio, account, sync and transmit actions are
+  disabled in demo mode, and demo edits are never persisted.
+- **Added an installable offline shell:** manifest, service worker, app icon,
+  security/cache headers and a branded social-preview card. The API is excluded
+  from the service-worker cache.
+- `Probe groups` now respects the manually overridden group count; using the
+  radio's suspect reported count made the probe stop after group 1.
+- Expanded the protocol suite from 76 to **79 assertions** for APRS-path framing
+  and TNC-fragment round trips. Updated the handoff and radio notes with the
+  owner's report that the broader live-radio workflow works, plus the exact
+  confirmations still worth recording.
+
 ## 2026-08-24 (handoff) — privacy copy corrected, PLAN.md rewritten
 
 - **Corrected four false privacy claims on the live page.** The footer, the

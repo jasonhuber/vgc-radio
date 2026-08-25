@@ -138,9 +138,21 @@ function r_db(): PDO {
             t0         INTEGER NOT NULL,
             t1         INTEGER,
             label      TEXT NOT NULL DEFAULT "",
+            antenna    TEXT NOT NULL DEFAULT "",
+            radio      TEXT NOT NULL DEFAULT "",
+            client_updated INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL,
             PRIMARY KEY (user_id, sid)
         )');
+    /* Additive migration for databases created before session equipment tags
+       and deterministic cross-device conflict resolution shipped. */
+    $covSessionCols = array_column($pdo->query('PRAGMA table_info(cov_sessions)')->fetchAll(), 'name');
+    if (!in_array('antenna', $covSessionCols, true))
+        $pdo->exec('ALTER TABLE cov_sessions ADD COLUMN antenna TEXT NOT NULL DEFAULT ""');
+    if (!in_array('radio', $covSessionCols, true))
+        $pdo->exec('ALTER TABLE cov_sessions ADD COLUMN radio TEXT NOT NULL DEFAULT ""');
+    if (!in_array('client_updated', $covSessionCols, true))
+        $pdo->exec('ALTER TABLE cov_sessions ADD COLUMN client_updated INTEGER NOT NULL DEFAULT 0');
     $pdo->exec('
         CREATE TABLE IF NOT EXISTS cov_rows (
             user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -401,13 +413,17 @@ if ($method === 'GET' && $sub === 'coverage') {
     $uid = (int)$u['id'];
     $db  = r_db();
 
-    $st = $db->prepare('SELECT sid, t0, t1, label FROM cov_sessions WHERE user_id = ? ORDER BY t0');
+    $st = $db->prepare('SELECT sid, t0, t1, label, antenna, radio, client_updated
+                        FROM cov_sessions WHERE user_id = ? ORDER BY t0');
     $st->execute([$uid]);
     $sessions = array_map(static fn(array $r): array => [
         'id'    => (int)$r['sid'],
         't0'    => (int)$r['t0'],
         't1'    => $r['t1'] === null ? null : (int)$r['t1'],
         'label' => (string)$r['label'],
+        'antenna' => (string)$r['antenna'],
+        'radio' => (string)$r['radio'],
+        'updated' => (int)$r['client_updated'],
     ], $st->fetchAll());
 
     $st = $db->prepare('SELECT payload FROM cov_rows WHERE user_id = ?');
@@ -449,16 +465,23 @@ if ($method === 'POST' && $sub === 'coverage') {
     $db->beginTransaction();
     try {
         $ins = $db->prepare('
-            INSERT INTO cov_sessions (user_id, sid, t0, t1, label, updated_at)
-            VALUES (:u, :sid, :t0, :t1, :label, :up)
+            INSERT INTO cov_sessions (user_id, sid, t0, t1, label, antenna, radio, client_updated, updated_at)
+            VALUES (:u, :sid, :t0, :t1, :label, :antenna, :radio, :client_up, :up)
             ON CONFLICT(user_id, sid) DO UPDATE SET
-                t1 = excluded.t1, label = excluded.label, updated_at = excluded.updated_at');
+                t1 = excluded.t1, label = excluded.label, antenna = excluded.antenna,
+                radio = excluded.radio, client_updated = excluded.client_updated,
+                updated_at = excluded.updated_at
+            WHERE excluded.client_updated >= cov_sessions.client_updated');
         foreach ($sessions as $s) {
             if (!is_array($s) || !isset($s['id'])) continue;
             $ins->execute([
                 ':u' => $uid, ':sid' => (int)$s['id'], ':t0' => (int)($s['t0'] ?? 0),
                 ':t1' => isset($s['t1']) && $s['t1'] !== null ? (int)$s['t1'] : null,
-                ':label' => substr((string)($s['label'] ?? ''), 0, 60), ':up' => r_now_iso(),
+                ':label' => substr((string)($s['label'] ?? ''), 0, 60),
+                ':antenna' => substr((string)($s['antenna'] ?? ''), 0, 60),
+                ':radio' => substr((string)($s['radio'] ?? ''), 0, 80),
+                ':client_up' => (int)($s['updated'] ?? $s['t1'] ?? $s['t0'] ?? 0),
+                ':up' => r_now_iso(),
             ]);
             $nS++;
         }

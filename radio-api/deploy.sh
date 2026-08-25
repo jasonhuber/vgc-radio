@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ENV_FILE="$HOME/Library/CloudStorage/Dropbox/Personal/jasonhuber.com/llm-api/.env"
+ENV_FILE="${N7WGP_DEPLOY_ENV:-$HOME/Library/CloudStorage/Dropbox/Personal/jasonhuber.com/llm-api/.env}"
 [[ -f "$ENV_FILE" ]] || { echo "missing $ENV_FILE" >&2; exit 1; }
 [[ -f index.php ]]   || { echo "index.php not found" >&2; exit 1; }
 [[ -f config.php ]]  || { echo "config.php not found -- cp config.example.php config.php and fill it in" >&2; exit 1; }

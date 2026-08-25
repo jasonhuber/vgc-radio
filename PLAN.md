@@ -1,6 +1,6 @@
 # VGC / Benshi radio control — plan and handoff
 
-Last rewritten **2026-08-24**. This file is written to be picked up **cold**:
+Last updated **2026-08-24** after the safety/offline/demo/coverage pass. This file is written to be picked up **cold**:
 read it top to bottom and you should be able to work without reading the code
 first. `PROTOCOL.md` is the wire reference; `CHANGELOG.md` is the history.
 
@@ -23,8 +23,9 @@ Two deployable pieces:
 | The API | `radio-api/` — PHP + SQLite | `n7wgp.com/api` |
 
 The page talks to the radio over **Web Bluetooth** (BLE only — see §9) and to
-the API for sign-in, coverage sync and list review. It is **invite only**: with
-no session, the page shows nothing but a login card.
+the API for sign-in, coverage sync and list review. Account creation is
+**invite only**; signed-out visitors see a public overview and synthetic
+read-only demo, while radio access and saved work remain behind sign-in.
 
 ---
 
@@ -38,8 +39,11 @@ no session, the page shows nothing but a login card.
 | `radio-api/radio-data/` | SQLite database. **Gitignored, server-side only** |
 | `radio-api/deploy.sh` | Publishes the API |
 | `deploy-n7wgp.sh` | Publishes the page |
+| `manifest.webmanifest`, `sw.js`, `radio-icon.svg` | Installable/offline app shell |
+| `site.htaccess` | Root security/cache headers, deployed as `.htaccess` |
+| `og.png` | Social-preview image for the public landing page |
 | `build-library.mjs` | Master CSV → embedded channel library + site geocoding |
-| `test-codec.mjs` | 76 offline protocol assertions, extracted from the HTML |
+| `test-codec.mjs` | 79 offline protocol assertions, extracted from the HTML |
 | `PROTOCOL.md` | Wire protocol: framing, every bitfield, what is guessed |
 | `radios/` | Per-radio capacity, quirks, test status |
 | `public/` | Deploy output. **Generated — never edit** |
@@ -53,7 +57,7 @@ Master channel CSV lives **outside** this repo:
 ## 3. How to work on it
 
 ```bash
-node test-codec.mjs                 # 76 assertions — run before every deploy
+node test-codec.mjs                 # 79 assertions — run before every deploy
 node build-library.mjs              # summary + sanity checks, writes nothing
 node build-library.mjs --write      # regenerate the embedded library from the CSV
 ./deploy-n7wgp.sh                   # dry run
@@ -91,17 +95,20 @@ touched a radio**.
 |---|---|---|
 | BLE transport, bonding, retries | working | on real hardware |
 | Channel read / write | working | 31 channels written to a real VR-N76 |
-| `RfCh` codec (25 bytes) | verified | 76 offline assertions + live round-trip |
+| `RfCh` codec (25 bytes) | verified | protocol suite 79/79 + live round-trip |
 | Group/slot layout editor | built | in-browser only, **not hardware end-to-end** |
 | Repeater map, 80 sites | working | in-browser |
-| Live status strip (RSSI, TX/RX, battery, group) | built | **never seen real data** |
-| Event push (status/channel/packet-in) | built | **never seen real data** |
-| `SET_REGION` group switching | **unresolved** | see §7 — the blocker |
-| APRS/BSS settings page | built | 4 offline assertions, **never run on hardware** |
-| Group (region) rename | built | **never round-tripped on hardware** |
-| Coverage log: sessions, GPS track, bubble map | built | in-browser with synthetic data, **never run against a radio** |
+| Live status strip (RSSI, TX/RX, battery, group) | working by owner report | exact observed fields still need recording |
+| Event push (status/channel/packet-in) | working by owner report | exact event/firmware matrix still needs recording |
+| `SET_REGION` group switching | working by owner report | an incorrect destination was actually overwritten; writes are now guarded and backed up |
+| APRS/BSS settings page | working by owner report | path controls are new and still need read/write/read confirmation |
+| Group (region) rename | working by owner report | exact round-trip result still needs recording |
+| Coverage log: sessions, antenna/radio tags, privacy zone, GPS track, bubble map | working by owner report | new tags/privacy behavior need one field run |
 | Accounts, coverage sync, admin routes | **working** | end-to-end against the live host |
 | AI list review (`/check-list`) | **working** | live; found a real library bug on first use |
+| Pre-write radio backup and restore | built | 79 offline assertions overall; restore needs a deliberate hardware exercise |
+| APRS path + raw packet terminal | built, experimental | codec tested; not transmitted from this version |
+| Public demo + installable offline shell | built | local validation pending deploy |
 | UI split into pages, on-page instructions | built | in-browser |
 
 ---
@@ -123,11 +130,18 @@ heading. Pages: `start`, `radio`, `channels`, `map`, `coverage`, `packet`,
 |---|---|
 | `n7wgp.vrn76.library.v1` | the working channel library |
 | `n7wgp.vrn76.layout.v1` | group/slot plan |
-| `n7wgp.vrn76.coverage.v2` | `{sessions, rows, track, idleMin}` |
+| `n7wgp.vrn76.coverage.v2` | Sessions, rows, track, antenna/privacy preferences and pending deletes |
 | `n7wgp.vrn76.auth.v1` | `{token, user}` |
+| `n7wgp.vrn76.radio-backups.v1` | The latest 12 pre-write group backups |
 
 `coverage.v1` (a flat row array) migrates into one session automatically on
 first load. Do not remove that migration without a version bump.
+
+Each session may carry `antenna` and `radio`. A privacy-zone center and radius
+are local-only preferences: new receptions inside the zone retain time/signal
+but get no coordinates, and breadcrumbs inside it are not stored. "Redact saved
+log" applies the same rule retroactively, queues a server reset, then re-uploads
+the sanitized copy.
 
 **Numbering trap.** Display is **1-based**, the wire is **0-based**. Group
 tabs, the slot grid, the status strip and every log line add 1 for display.
@@ -157,13 +171,12 @@ RSSI sample is discarded.
   no longer carries coverage points.
 - Caps: 5000 receptions, 8000 breadcrumbs.
 
-**Everything it records comes from `StatusExt`, which this project has never
-seen arrive.** RSSI, `curr_region` and the upper channel bits all live in the
-extended half. So the first real-hardware run is simultaneously (a) the
-hardware test the status strip has been waiting for, (b) evidence on whether
-`curr_region` is real — which is the cheapest way to settle §7 — and (c) the
-coverage log's own shakedown. **If the group column reads 1 everywhere and RSSI
-is blank, the radio is sending short `Status`** and only the
+The owner reports that live status and coverage work, but the exact observed
+`StatusExt` fields have not been written down yet. RSSI, `curr_region` and the
+upper channel bits all live in that extended half. The next deliberate field
+run should record firmware plus representative values so support for other
+models can be compared. **If a future radio shows group 1 everywhere and blank
+RSSI, it is probably sending short `Status`** and only the
 timestamp/channel/position half of each row is trustworthy.
 
 **Why it cannot start the scan.** No scan start/stop command has been decoded
@@ -239,8 +252,10 @@ login wall between a parked operator and their channel list.
 
 Push and pull **merge**, never replace, so two devices can both contribute.
 Re-pushing is idempotent: rows key on `sid|t|g|ch|kind`, track on `sid|t`.
-A finished session uploads itself. Verified by wiping the browser copy and
-pulling it all back.
+Session metadata uses a client-updated timestamp for deterministic last-write-
+wins merging. Deletes are durable too: an offline deletion becomes a local
+tombstone and is sent before the next pull, so deleted sessions cannot be
+resurrected by sync. A finished session uploads itself.
 
 ### Credentials
 
@@ -260,8 +275,9 @@ curl -s -X POST https://n7wgp.com/api/admin/invite \
 ```
 
 SSH credentials for both deploys come from
-`../../jasonhuber.com/llm-api/.env` — n7wgp.com is an addon domain on that
-same Hostinger account.
+`../../jasonhuber.com/llm-api/.env` by default — n7wgp.com is an addon domain
+on that same Hostinger account. If the shared credentials move, set
+`N7WGP_DEPLOY_ENV=/absolute/path/to/.env` for either deploy script.
 
 ### The AI proxy
 
@@ -298,26 +314,38 @@ does not pin a provider.
 
 ---
 
-## 7. The blocker: does `SET_REGION` actually switch groups?
+## 7. Region switching and write safety
 
-**Still unresolved.** This gates the whole multi-group story.
+The owner reports that multi-group operations work on the VR-N76. The strongest
+evidence is an accidental overwrite of the wrong region, which also exposed the
+real remaining problem: destination confirmation and recovery, not the command
+shape.
 
 `SET_REGION` (60) gets **no reply at all** — confirmed by HTCommander's
 hardware-tested notes. This app used to `await request(...)` like every other
 command, burning a silent 5-second timeout on *every* call including the first
 one inside "Probe groups". That is fixed (`sendNoReply()` plus a 150 ms
-settle), which means **every previous test of group switching may have failed
-for a reason unrelated to the index guess.** Needs a fresh hardware test.
+settle). The owner now reports that multi-group operation works; the remaining
+job is to record the exact observed status values and firmware version.
 
-Three ways to settle it, cheapest first:
+The app now protects every group write in three ways:
+
+1. The operator must type `WRITE N` for the exact destination group; bulk write
+   requires `WRITE ALL 1,2,…`.
+2. Before writing, the app switches to that group and reads every slot. A write
+   is cancelled if the backup is incomplete.
+3. Backups are kept locally (latest 12), downloadable as JSON, and the most
+   recent backup for a group can be restored after typing `RESTORE N`.
+
+Still worth recording during the next deliberate hardware session:
 
 1. **Watch `curr_region` in the status strip** while changing groups on the
    radio's own keypad. Proves the field is real and gives known-good values.
    Running the coverage log does this for free.
 2. **Press "Probe groups."** It calls `setRegion(g)` then reads channel 0 of
    each. Distinct contents ⇒ it works. Identical ⇒ the guess is wrong.
-3. If wrong, capture what the VGC phone app sends. `SET_REGION` may take a
-   16-bit index, or switching may run through `WRITE_REGION_CH` (58).
+3. Record firmware, reported count and overridden count so the result is
+   reproducible on another VR-N76.
 
 The VR-N76 is specced at **6 groups × 32 = 192**. The radio reports
 `channel_count: 32` correctly but a `region_count` of 0 or 1, which is why the
@@ -327,11 +355,10 @@ group count is manually overridable in the UI.
 
 ## 8. Roadmap
 
-### 8.1 Hardware pass — do this first, it costs one evening
+### 8.1 Hardware confirmation log — mostly done, document the exact results
 
-Nothing below matters as much as putting a radio in front of what is already
-built. In one sitting you can settle §7, the status strip, event push, the
-coverage log, the APRS panel and group rename. Order:
+The owner reports that most live-radio workflows work. Do not repeat exploratory
+writes casually; use one deliberate session to record the exact results:
 
 1. Connect. Watch the status strip — does RSSI/group appear (`StatusExt`)?
 2. Change groups on the keypad. Does `curr_region` track?
@@ -342,15 +369,15 @@ coverage log, the APRS panel and group rename. Order:
 
 Record what you learn in `radios/VR-N76.md` and `CHANGELOG.md`.
 
-### 8.2 Packet terminal (KISS TNC)
+### 8.2 Packet terminal (KISS TNC) — raw transport built
 
-Receive already works (`DATA_RXD` → protocol log → coverage rows). Missing:
+Receive reassembly and transmit fragmentation now work at the raw payload level.
+Transmit is one-fragment-in-flight, waits for every acknowledgement, blocks
+while TX/RX/squelch is active, and requires typing `TRANSMIT`. Missing:
 
-- **Send:** `HT_SEND_DATA` (31), body is `TncDataFragment`
-  (`is_final:1 | with_channel_id:1 | fragment_id:6 | data | [channel_id:8]`).
-  Fragment anything longer than one BLE write.
-- **Then:** AX.25 decode → APRS parse → positions onto the map, which already
-  has a working projection.
+- AX.25 frame builder/parser and APRS message/position interpretation.
+- A friendly APRS composer so operators do not need to supply raw frame bytes.
+- Live confirmation of the maximum safe BLE fragment size on the VR-N76.
 
 ### 8.3 Radio settings page
 
@@ -363,9 +390,6 @@ which is the prerequisite for any app-driven scan (§5).
 
 ### 8.4 Smaller wins
 
-- **APRS path** — `SET_APRS_PATH` (71) / `GET_APRS_PATH` (72), decoded by
-  HTCommander: a plain UTF-8 string, reply `[status] + path`. Cheap. The APRS
-  panel currently tells users to set it from the radio's menu.
 - **GPS position** — `SET_POSITION` (32).
 - **PF keys** — `GET_PF` (55) / `SET_PF` (56), decoded in `pf.py`.
 - **Password reset.** There is none, and no email is sent from that host.
@@ -397,12 +421,31 @@ three questions that were never answered:
 
 The Start page still carries a card for this, marked "not built yet".
 
-### 8.6 Not decoded — reverse engineering required
+### 8.6 Additional product ideas
+
+- **Coverage comparison:** compare sessions by antenna, radio, route and date;
+  highlight cells heard by one setup but not another.
+- **Dead-zone analysis:** grid the travelled track and distinguish silence from
+  places never visited.
+- **Field dashboard:** sunlight-readable, glove-sized status and logging controls.
+- **Trip profiles:** named, previewable codeplug plans for commute, Rim Country,
+  GMRS, campground, events and emergency use.
+- **Compatibility lab:** opt-in diagnostic bundles and a verified model/firmware
+  matrix without location data.
+- **Multiple privacy zones and export-time blur:** the first version supports one
+  local exclusion zone; multiple named zones and coarse rounding are natural next steps.
+- **Account controls:** self-service export/delete, recovery codes or password reset,
+  and an owner UI that does not expose the admin bearer token.
+- **Maintainability:** split the 4,000-line source into build-time modules while
+  preserving one deployable HTML file; add automated browser/API tests and an
+  accessibility pass.
+
+### 8.7 Not decoded — reverse engineering required
 
 FM broadcast control (`RADIO_*`, 24–28), text messages (67/68), advanced
 settings (29/30), `SET_VOLUME` (23), `SET_HT_ON_OFF` (21), `READ_FREQ_RANGE`
-(39), `WRITE_REGION_CH` (58). For `SET_REGION` (60) the request/reply shape is
-known; only the meaning of the index is unconfirmed.
+(39), `WRITE_REGION_CH` (58). `SET_REGION` (60) is implemented and works by
+owner report, though its exact firmware/status matrix is not documented yet.
 
 ---
 
