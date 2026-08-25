@@ -31,6 +31,11 @@ mkdir -p public
 cp vgc-programmer.html public/index.html
 cp manifest.webmanifest radio-icon.svg og.png sw.js public/
 cp site.htaccess public/.htaccess
+# cp preserves the source mode, and several sources are 0600. Apache must be
+# able to read every published file, so normalise here rather than relying on
+# rsync --chmod, which the remote did not honour.
+chmod 644 public/index.html public/.htaccess public/manifest.webmanifest \
+          public/radio-icon.svg public/og.png public/sw.js
 echo "built public/index.html ($(wc -c < public/index.html | tr -d ' ') bytes)"
 
 RSYNC_FLAGS=(-az --human-readable --chmod=u=rwX,go=rX
