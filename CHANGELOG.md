@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-25 — DeepSeek confirmed live, TD-H3 research
+
+- **AI list checking now genuinely runs on DeepSeek.** The Sustav worker behind
+  `api.sustav.dev` has DeepSeek deployed and keyed, so `RADIO_PROXY_PROVIDER =
+  'deepseek'` no longer falls through to OpenAI. Verified against `/health`:
+  `configuredProviders: ["deepseek","openai","anthropic"]`. Failover to OpenAI
+  then Anthropic is unchanged, and the `source` field still reports who actually
+  answered, so a fallback stays visible in the UI. The stale caveat in
+  `radio-api/config.php` was replaced. See
+  `NOTE-deepseek-proxy-2026-08-24.md` — no code in this repo needed to change.
+- **Added TD-H3 protocol research** under `TD-H3/`. Conclusion: build a separate
+  TD-H3 Web Bluetooth programmer rather than mixing TD-H3 packets into the
+  Benshi/VGC transport. No implementation yet.
+
 ## 2026-08-24 (field-safety pass) — durable deletes, backups, antenna tags, privacy, demo and offline install
 
 - **Coverage sync deletions are now real.** Session/all deletion queues a local
