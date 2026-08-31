@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-31 (late) — replace whole group
+
+- **A group write can now clear what it does not plan.** Until now `writeGroup`
+  wrote only the filled slots, so anything an older codeplug left further down
+  the group stayed on the radio; the slots showed as `radio: <name>` in the
+  layout but nothing removed them. New **replace whole group** checkbox next to
+  the write buttons, off by default.
+- The radio has **no delete command** — `WRITE_RF_CH` is the only channel write
+  — so a cleared slot is a record with `rx_freq` 0, which is exactly what
+  `readAll` already treats as an empty slot. **This has never been verified on
+  hardware**: if the firmware rejects it, the slots report `INVALID_PARAMETER`
+  and keep their contents. Said plainly in the UI and the guide.
+- When the group has been read, only slots the radio actually holds are blanked;
+  when it has not, every planned-empty slot is, because there is no way to know.
+  Verified in the browser against a simulated radio: plan in slots 0–2 with the
+  radio holding 3, 4 and 7 writes three channels and three blanks in slot order,
+  and leaves every other slot alone. With the box unticked, writes are unchanged.
+- The wipe carries its own confirmation on top of the type-the-group-number
+  gate, and the automatic pre-write backup still runs, so **Restore last backup**
+  puts the cleared channels back.
+
 ## 2026-08-31 (evening) — the layout editor stopped being tedious
 
 - **Auto-arrange all groups.** One press plans the entire radio. Three policies:

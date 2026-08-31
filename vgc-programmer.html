@@ -693,10 +693,20 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <button id="btnSortGroup">Sort by frequency</button>
       <button id="btnClearGroup">Clear this group</button>
       <span style="flex:1"></span>
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)"
+        title="Also blank any slot the radio holds that your plan leaves empty">
+        <input id="wipeGroup" type="checkbox" style="width:auto"> replace whole group</label>
       <button id="btnWriteLayout" class="danger" disabled>Write this group → radio</button>
       <button id="btnWriteAllGroups" class="danger" disabled>Write every group → radio</button>
     </div>
     <div id="slots"></div>
+    <p class="note"><b>Replace whole group</b> also blanks the slots your plan leaves empty, so an
+    old codeplug's channels are not left sitting past the end of your list. The radio has no
+    delete command, so a cleared slot is a channel written with a zero frequency — which is what
+    this app already treats as empty when it reads. <b>Blanking has not been verified on
+    hardware</b>; if the firmware refuses it you will see <code>INVALID_PARAMETER</code> per slot
+    in the protocol log and those slots keep what they had. Read the group first and only the
+    slots the radio actually holds are touched.</p>
     <p class="note">Before a group write, the app reads and saves that radio group automatically.
     Restoring the latest backup writes the exact saved channels back. You must type the destination
     group number before either operation begins.</p>
@@ -3854,13 +3864,33 @@ function radioCapacity(){ return devInfo?.channel_count || null; }
 /* Writes one radio group from the layout. Slot index IS the channel_id sent
    to the radio, so a library channel numbered 72 can land in slot 3 of group
    1 -- the library number is only an identifier here, never a destination. */
-async function writeGroup(g, { confirmFirst = true, skipBackup = false } = {}){
+async function writeGroup(g, { confirmFirst = true, skipBackup = false, clearRest = null } = {}){
   const slots = groupSlots(g);
+  const wipe = clearRest == null
+    ? !!(document.getElementById("wipeGroup") || {}).checked
+    : clearRest;
   const items = slots.map((id, i) => ({ i, c: id == null ? null : libById(id) }))
                      .filter(x => x.c);
-  if (!items.length){ log(`group ${g+1} is empty — nothing to write`); return { ok:0, bad:0 }; }
+  /* Optional wipe. The radio has no delete command -- WRITE_RF_CH is the only
+     channel write there is -- so "empty" is a record with rx_freq 0, which is
+     exactly what readAll already treats as an empty slot. If the group has been
+     read we only blank slots the radio actually holds; if it has not, we blank
+     every planned-empty slot, because there is no way to know. */
+  const blanks = !wipe ? []
+    : slots.map((id, i) => ({ i, id }))
+           .filter(x => x.id == null && (!onRadio.has(g) || radioAt(g, x.i)))
+           .map(x => ({ i: x.i, c: null, blank: true }));
+  const work = items.concat(blanks).sort((a, b) => a.i - b.i);
+  if (!work.length){ log(`group ${g+1} is empty — nothing to write`); return { ok:0, bad:0 }; }
 
   if (confirmFirst && !confirmGroupDestination(g,"WRITE")) return { ok:0, bad:0 };
+  if (confirmFirst && blanks.length &&
+      !confirm(`Also clear ${blanks.length} slot(s) in group ${g+1} that your plan leaves empty?\n\n` +
+               `That blanks channels currently on the radio. The group is backed up first and ` +
+               `Restore last backup puts them back.\n\n` +
+               `Blanking has never been verified on this hardware: if the firmware refuses it you ` +
+               `will see INVALID_PARAMETER in the protocol log and those slots keep what they had.`))
+    return { ok:0, bad:0 };
 
   if (!skipBackup){
     try { await captureRadioGroup(g); }
@@ -3873,17 +3903,21 @@ async function writeGroup(g, { confirmFirst = true, skipBackup = false } = {}){
   }
 
   const prog = document.getElementById("prog");
-  prog.classList.remove("hidden"); prog.max = items.length; prog.value = 0;
-  let ok = 0, bad = 0;
-  for (const { i, c } of items){
+  prog.classList.remove("hidden"); prog.max = work.length; prog.value = 0;
+  let ok = 0, bad = 0, cleared = 0;
+  for (const { i, c, blank } of work){
     try {
-      await writeChannel(toRadio(Object.assign({}, c, { channel_id: i })));
-      ok++; log(`group ${g+1} slot ${i+1} ← ${c.name}`, "l-rx");
+      const rec = blank ? fromLib({ i, r: 0, n: "" }) : Object.assign({}, c);
+      rec.channel_id = i;
+      await writeChannel(toRadio(rec));
+      ok++; if (blank) cleared++;
+      log(`group ${g+1} slot ${i+1} ${blank ? "cleared" : "← " + c.name}`, "l-rx");
     } catch(e){ bad++; log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err"); }
     prog.value = ok + bad;
   }
   prog.classList.add("hidden");
-  log(`group ${g+1}: ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
+  log(`group ${g+1}: ${ok} written${cleared ? ` (${cleared} cleared)` : ""}, ${bad} failed`,
+      bad ? "l-err" : "l-rx");
   return { ok, bad };
 }
 
