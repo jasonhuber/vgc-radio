@@ -1,5 +1,69 @@
 # Changelog
 
+## 2026-08-31 (evening) — the layout editor stopped being tedious
+
+- **Auto-arrange all groups.** One press plans the entire radio. Three policies:
+  by category (each library category gets its own group, a big one spilling
+  across consecutive groups), nearest first, or by band. It previews the layout
+  and asks before replacing the plan; the radio is never touched. On the current
+  126-channel library the category policy produces Simplex 22 / Metro 32 / Metro
+  32 / Metro+Travel 16 / GMRS+Sat 24 / empty.
+- **Every group visible at once.** The layout section was one group at a time
+  behind tabs, which is what made placing a single channel take so long. It now
+  renders all groups as columns by default; the old single-group view is a
+  checkbox.
+- **Drag and drop.** Drag a slot onto any other slot, in the same group or
+  across groups, and the two swap — so a move into a gap and a reorder are one
+  operation and neither can lose a channel. Library rows are drag sources
+  straight into a slot.
+- **Close gaps / Sort by frequency** for the selected group.
+- **Fixed: channel 0 was invisible to every slot count.** Slot ids are numbers
+  and `0` is falsy, so `filter(Boolean)`/`some(Boolean)` on slot arrays dropped
+  channel 0 — which is 2m National, 146.52. It undercounted every group holding
+  it, and a group containing only it looked empty: the write button stayed
+  disabled and "Write every group" skipped the group entirely. Emptiness is now
+  `== null` everywhere via `slotsUsed()`/`anySlot()`. Pre-existing, not from
+  this pass.
+
+## 2026-08-31 (later) — the library had no APRS channel
+
+- **Added 144.390 MHz to the channel library.** The instructions told you to
+  point the radio's digital channel at 144.390 and the library never contained a
+  channel at that frequency, so there was nothing to select. Found while setting
+  up the second VR-N76: the radio was correctly configured for APRS and keyed up
+  on 147.580 because that was what existed. Master CSV row 128, wide FM, no
+  tone, `Skip=S` so the scanner doesn't stop on packet bursts.
+- **`groupOf()` now honours an explicit `[SAT]` comment tag**, checked before the
+  frequency rules, following the existing `[TRAVEL]` convention. The satellite
+  group was matched on 430–440 MHz, which a 2 m APRS channel could never hit.
+  Satellite is now ids 127–128.
+
+## 2026-08-31 — full APRS explainer in the instructions
+
+- **Rewrote the APRS section of the on-page guide** (`g-packet`) from a setup
+  checklist into an explainer. New material: what APRS is actually for; the
+  end-to-end path a beacon takes (radio TNC → 144.390 → digipeater → iGate →
+  APRS-IS → aprs.fi) and which link usually fails; a can/can't table for this
+  radio (no smart beaconing, no messaging from this page, no digipeating); the
+  digipeater path explained with `WIDE1-1,WIDE2-1` as the default and why more
+  hops is abuse; SSID conventions; beacon-interval guidance by activity; how to
+  prove it worked on aprs.fi; and a plain statement of the licensing rules.
+- **Added a privacy callout.** APRS is public and permanently archived by
+  callsign — stated up front, with receive-only named as a normal way to run.
+- **Added a "two radios in the family" subsection**, prompted by programming a
+  second VR-N76: each licensed operator beacons under their own callsign (a
+  position report is an identification), SSIDs separate one person's devices,
+  and duplicate callsign+SSID is what makes a station teleport on the map. Also
+  notes that the library and layout live in the browser, so the same plan writes
+  to any number of radios, but callsign/SSID/symbol live on the radio — read
+  from the radio after connecting a different one.
+- **Documented the unverified fields honestly.** Max forward hops and time to
+  live are described as BSS mesh forwarding, meaning taken from the reference
+  implementation's field names and never confirmed on hardware — explicitly not
+  the APRS path.
+- Styling only otherwise: `.doc table` now has row-header rules so guide tables
+  don't inherit the interactive channel-table look.
+
 ## 2026-08-25 — DeepSeek confirmed live, TD-H3 research
 
 - **AI list checking now genuinely runs on DeepSeek.** The Sustav worker behind

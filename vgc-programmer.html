@@ -74,6 +74,10 @@ main{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
 .doc .callout{border-left:3px solid var(--warn);padding:2px 0 2px 12px;margin:12px 0;color:var(--muted)}
 .doc .callout b{color:var(--ink)}
 .doc table{white-space:normal;font-size:12.5px;font-family:inherit;margin:10px 0}
+.doc table th{position:static;background:transparent;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink);white-space:normal;vertical-align:top;width:32%}
+.doc table td{vertical-align:top;color:var(--muted)}
+.doc table tbody tr{cursor:default}
+.doc table tbody tr:hover{background:transparent}
 .doc table th,.doc table td{vertical-align:top}
 #cov{display:flex;gap:11px;flex-wrap:wrap;align-items:center;padding:9px 11px;
   border:1px solid var(--line);border-radius:8px;background:var(--sunk);font:11px var(--mono)}
@@ -213,6 +217,14 @@ progress{width:180px;height:8px}
 .slot .x{color:var(--err);font-weight:700;padding:0 3px;border-radius:4px}
 .slot .x:hover{background:var(--err);color:#fff}
 .slot .dot{width:7px;height:7px;border-radius:50%;flex:none}
+#slots.board{grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:12px;align-items:start}
+.gcol{border:1px solid var(--line);border-radius:8px;background:var(--sunk);padding:8px;min-width:0}
+.gcol.cur{border-color:var(--accent)}
+.ghead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;cursor:pointer;
+  font:11px var(--mono);padding:2px 4px 7px;text-transform:uppercase;letter-spacing:.04em}
+.gslots{display:flex;flex-direction:column;gap:3px}
+.slot.drag{opacity:.4}
+.slot.over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 td.plus{width:26px;text-align:center}
 td.plus button{padding:1px 7px;font:700 13px/1.3 var(--mono);border-radius:5px}
 #mapWrap{border:1px solid var(--line);border-radius:8px;background:var(--sunk);overflow:hidden}
@@ -665,7 +677,20 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <span id="capNote"></span>
     </div>
     <div class="row" style="margin-bottom:10px">
+      <select id="autoPolicy" title="How Auto-arrange decides which group a channel lands in">
+        <option value="category">Auto-arrange: by category</option>
+        <option value="distance">Auto-arrange: nearest first</option>
+        <option value="band">Auto-arrange: by band</option>
+      </select>
+      <button id="btnAuto">Auto-arrange all groups</button>
+      <span class="dim">Plans the whole radio at once. Nothing is sent until you write.</span>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">
+        <input id="boardToggle" type="checkbox" checked style="width:auto"> show every group</label>
       <button id="btnFillGroup">Fill empty slots from shown list</button>
+      <button id="btnCompact">Close gaps</button>
+      <button id="btnSortGroup">Sort by frequency</button>
       <button id="btnClearGroup">Clear this group</button>
       <span style="flex:1"></span>
       <button id="btnWriteLayout" class="danger" disabled>Write this group → radio</button>
@@ -675,9 +700,11 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <p class="note">Before a group write, the app reads and saves that radio group automatically.
     Restoring the latest backup writes the exact saved channels back. You must type the destination
     group number before either operation begins.</p>
-    <p class="note">Click a slot to target it, then press <b>+</b> on a channel below to place it
-    there. A channel may appear in as many groups and slots as you like. Slot numbers are the
-    radio's memory positions.</p>
+    <p class="note"><b>Drag a slot onto another to move it</b> — within a group or across
+    groups; the two swap, so dragging onto an empty slot moves and dragging onto a full one
+    reorders. <b>Drag a row from the channel library</b> straight into a slot. Or click a slot to
+    target it and press <b>+</b> on a channel below. A channel may appear in as many groups and
+    slots as you like. Slot numbers are the radio's memory positions.</p>
     <p class="note">Group names live on the radio itself (<code>READ_REGION_NAME</code> /
     <code>WRITE_REGION_NAME</code>) — this reads and writes them for real, not just in the
     browser. Byte layout isn't from benlink; it's a community decode confirmed against real
@@ -819,7 +846,17 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <li><b>Narrow the library.</b> Use the category chips (Simplex, Phoenix Metro, Rim Country,
       GMRS/FRS, Satellite), or go to the <b>Map</b> page and click a site to show only that site's
       channels — the filter follows you back to the Channels page.</li>
-      <li><b>Pick the target group</b> with the group tabs, then either press
+      <li><b>Or let it lay itself out.</b> <b>Auto-arrange all groups</b> plans the whole radio
+      in one press. <i>By category</i> gives each library category its own group, spilling a big
+      category across consecutive groups; <i>nearest first</i> orders everything by distance from
+      the QTH; <i>by band</i> splits 2 m from 70 cm. It shows you the proposed layout and asks
+      before replacing the plan, and it never touches the radio.</li>
+      <li><b>Then rearrange by hand.</b> Leave <b>show every group</b> ticked and all six groups
+      sit side by side. <b>Drag any slot onto any other</b> — same group or a different one — and
+      the two swap, so nothing is ever lost by dropping in the wrong place. <b>Drag a row from the
+      channel library</b> straight into a slot. <b>Close gaps</b> and <b>Sort by frequency</b>
+      tidy the selected group.</li>
+      <li>The older way still works: pick the target group, then either press
       <b>Fill empty slots from shown list</b> to drop the whole filtered list in, or click a slot
       to target it and press <b>+</b> on a specific channel.</li>
       <li><b>Write.</b> <b>Write this group → radio</b> for one group,
@@ -924,18 +961,64 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     </ul>
 
     <h3 id="g-packet">APRS, BSS, TNC and KISS</h3>
+
+    <h4>What APRS is for</h4>
+    <p><b>APRS</b> — Automatic Packet Reporting System — is a shared, one-to-many data channel
+    riding on top of ordinary FM voice radio. Instead of talking, the radio sends a short burst of
+    data every so often, and every other station in earshot hears it. The four things people
+    actually use it for:</p>
+    <ul>
+      <li><b>Position reporting.</b> The radio takes its own GPS fix and broadcasts
+      <i>who and where</i>. This is the one that puts a moving icon on a map — useful on a drive,
+      a hike, a bike ride, a public-service event, or so somebody at home can see you are moving.</li>
+      <li><b>Short text.</b> A fixed status or beacon message rides along with the position, and
+      full APRS supports point-to-point messages between callsigns.</li>
+      <li><b>Local awareness.</b> Because everyone hears everyone, a receiving station builds a
+      live list of who is nearby and how far away — before anybody says a word.</li>
+      <li><b>Infrastructure and telemetry.</b> Weather stations, repeater bulletins, event traffic.</li>
+    </ul>
+    <div class="callout"><b>APRS is public, and it is archived.</b> Anything this radio beacons is
+    heard by anyone in range, forwarded onto the internet, and kept by sites like aprs.fi
+    essentially forever — including a searchable history of every position, by callsign. That is
+    the point of the system, not a flaw, but decide deliberately before turning on periodic
+    beaconing from a house, a school, or a child's radio. Beaconing off, receive on, is a
+    completely normal way to run APRS.</div>
+
+    <h4>How a beacon actually gets from this radio to a map</h4>
+    <p>Worth understanding, because when APRS "doesn't work" the failure is almost always one
+    specific link in this chain:</p>
+    <ol>
+      <li><b>The radio's TNC builds a packet</b> — your callsign, SSID, symbol, GPS position and
+      beacon message — and keys the transmitter for about half a second of noise. That is a
+      normal FM transmission on a normal channel; nothing special about the RF.</li>
+      <li><b>It goes out on the APRS channel.</b> In North America that is
+      <b>144.390 MHz simplex</b>, and everyone shares it. This must be the radio's <b>digital
+      channel</b> — see <a href="#" data-go="guide" data-anchor="g-radiomenu">set on the radio
+      itself</a> below. Wrong frequency is failure number one.</li>
+      <li><b>A digipeater hears it and repeats it</b>, if your path asks for that. Digipeaters
+      sit on hilltops and give a 5 W handheld the range it would never have on its own.</li>
+      <li><b>An iGate hears it and forwards it to the internet</b> — into APRS-IS, the global
+      backbone every APRS website reads from.</li>
+      <li><b>aprs.fi (and friends) draw it on a map.</b> Look yourself up at
+      <a href="https://aprs.fi" target="_blank" rel="noopener">aprs.fi</a> by callsign-SSID.</li>
+    </ol>
+    <p>Steps 3 and 4 are other people's equipment. In the Phoenix metro area coverage is good; in
+    the Rim Country it is patchy, and a beacon that nothing hears simply vanishes with no error
+    anywhere. Silence on aprs.fi does not by itself mean the radio is misconfigured.</p>
+
     <h4>The four words</h4>
-    <p><b>APRS</b> — Automatic Packet Reporting System — is the open ham standard for broadcasting
-    your position and short text messages over the air. Anything that speaks APRS can decode it,
-    including <a href="https://aprs.fi" target="_blank" rel="noopener">aprs.fi</a>, which will show
-    your track on a map for anyone to see. It requires a <b>licensed callsign</b>.</p>
+    <p><b>APRS</b> is the open ham standard described above. Anything that speaks APRS can decode
+    it. It requires a <b>licensed callsign</b>, and the licensee is responsible for what the radio
+    sends.</p>
     <p><b>BSS</b> is Vero Telecom's own packet format. Same idea, no callsign required, but only
-    other Benshi-family radios and the VGC phone app understand it. It is the option for someone
-    without a licence. The radio transmits one format or the other, never both — that's the
-    <b>Format</b> selector on the APRS page.</p>
+    other Benshi-family radios and the VGC phone app understand it — nothing on the ham APRS
+    network will see it, and it never reaches aprs.fi. It is the option for someone without a
+    licence, or for a private group of these radios talking among themselves. The radio transmits
+    one format or the other, never both — that's the <b>Format</b> selector on the APRS page.</p>
     <p><b>TNC</b> — Terminal Node Controller — is the packet modem: the thing that turns bytes into
     tones a radio can transmit, and tones back into bytes. Historically a separate box wired
-    between a radio and a computer. This radio has one built in.</p>
+    between a radio and a computer. This radio has one built in, which is the whole reason it can
+    do APRS with no extra hardware.</p>
     <p><b>KISS</b> ("keep it simple, stupid") is the minimal framing protocol a computer uses to
     hand raw packet bytes to a TNC and get them back, without either end needing to know anything
     about the other. It's the lingua franca between packet software and modems.</p>
@@ -943,26 +1026,123 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     over the same Bluetooth link this page already uses for everything else — the same GATT
     service, the same commands. You do not pair a second time, and there is no serial port or
     KISS TCP socket involved.</div>
+
+    <h4>What this radio does and doesn't do</h4>
+    <table>
+      <tr><th>Position beaconing on a timer</th><td><b>Yes</b> — fixed interval, from the radio's own GPS.</td></tr>
+      <tr><th>Beacon on PTT release</th><td><b>Yes</b> — position and/or ID text the moment you unkey.</td></tr>
+      <tr><th>Receive and decode other stations</th><td><b>Yes</b> on the radio's own screen. This page shows received packets raw, unparsed.</td></tr>
+      <tr><th>Smart beaconing (rate varies with speed)</th><td><b>No.</b> One fixed interval only.</td></tr>
+      <tr><th>APRS text messaging to another callsign</th><td>Not from this page. Use the radio's own menu or the VGC phone app.</td></tr>
+      <tr><th>Acting as a digipeater for others</th><td>No.</td></tr>
+      <tr><th>Weather or telemetry beacons</th><td>No, beyond the optional power/voltage field.</td></tr>
+      <tr><th>APRS <i>audio</i> over Bluetooth</th><td>Impossible in a browser — see <a href="#" data-go="guide" data-anchor="g-limits">Limits</a>.</td></tr>
+    </table>
+
     <h4>Setting APRS up</h4>
     <ol>
       <li>Connect the radio, then open the <b>APRS &amp; packet</b> page.</li>
       <li>Press <b>Read from radio</b> first, always. A write sends back <i>every</i> field
       including ones this page doesn't show, so it must start from the radio's real values.</li>
-      <li>Set your <b>callsign</b> and <b>SSID</b>. The SSID is the suffix in
-      <code>N7WGP-9</code> — 0 to 15, used so one callsign can run several stations without them
-      colliding on the map. The convention most people follow: <code>-9</code> for a vehicle,
-      <code>-7</code> for a handheld.</li>
+      <li>Set your <b>callsign</b> and <b>SSID</b> (see the table below). Six characters maximum —
+      that is the protocol's limit, not this page's.</li>
       <li>Pick a <b>symbol</b>, the two characters that choose the icon APRS maps draw for you.
-      <code>/[</code> is a person, <code>/></code> a car, <code>/-</code> a house. If unsure,
-      leave what the radio shipped with.</li>
+      <code>/[</code> is a person on foot, <code>/&gt;</code> a car, <code>/-</code> a house,
+      <code>/b</code> a bicycle, <code>/k</code> a truck. The first character is the symbol table
+      (<code>/</code> is the normal one); the second picks the icon.</li>
       <li>Set <b>Format</b> to APRS (licensed) or BSS (no licence).</li>
-      <li><b>Share location</b> plus an interval turns on periodic beaconing. Every 600 seconds is
-      polite for a fixed station; 60–120 makes sense while mobile. Faster than that on a busy
-      channel is inconsiderate.</li>
+      <li>Write a <b>beacon message</b> if you want one — 18 characters that ride along with the
+      position. A name, a purpose, a monitored frequency. It is public; keep it that way.</li>
+      <li><b>Share location</b> plus an interval turns on periodic beaconing. See the interval
+      guidance below. Leave it off if you only want to receive.</li>
       <li>The <b>PTT-release</b> toggles decide what goes out automatically the instant you let go
-      of the transmit button — position, ID text, BSS ID, or nothing.</li>
+      of the transmit button — position, ID text, BSS ID, or nothing. Handy on a voice channel;
+      pointless if the digital channel isn't the one you're talking on.</li>
+      <li>Set the <b>digipeater path</b> — see below — and press <b>Write path</b>. It is a
+      separate command from the settings write, with its own confirmation.</li>
       <li>Press <b>Write to radio</b>, then <b>Read from radio</b> again to confirm it took.</li>
+      <li>On the radio itself, set the digital channel to <b>144.390 MHz</b>:
+      <b>Menu → General Settings → Digital Mode → Digital Channel</b>. Nothing transmits usefully
+      until this is right.</li>
+      <li>Make sure the radio's <b>GPS is on and has a fix</b>. No fix, no position beacon.</li>
     </ol>
+
+    <h4>The digipeater path</h4>
+    <p>The path is your request for how many times other stations should repeat your packet. It is
+    written as a comma-separated list, and for almost everybody the answer is:</p>
+    <p><code>WIDE1-1,WIDE2-1</code></p>
+    <p>That means "one hop through a local fill-in digipeater, then one hop through a wide-area
+    one" — two hops total, which is the accepted norm for a handheld or a vehicle in populated
+    country. <code>WIDE2-1</code> alone is the polite choice if you are already high up or close to
+    a hilltop digipeater. An empty path is direct-only: nothing repeats you, which is fine for
+    testing whether a nearby iGate hears you at all.</p>
+    <div class="callout"><b>More hops is not better.</b> Every extra hop multiplies your packet
+    across the whole region on a channel everyone shares, and the network's convention is
+    two hops maximum. <code>WIDE3-3</code> and friends are considered abuse and some digipeaters
+    will simply drop them.</div>
+    <p>The path field takes up to 40 bytes. This page writes it and immediately reads it back, so
+    the value shown after a write is what the radio actually stored.</p>
+
+    <h4>Choosing an SSID</h4>
+    <p>The SSID is the <code>-7</code> in <code>N7WGP-7</code>: a number 0–15 that lets one
+    callsign run several stations without them colliding on the map. It has no legal meaning — the
+    callsign is the identification — but the conventions are near-universal and worth following:</p>
+    <table>
+      <tr><th>-0 (none)</th><td>Primary / home station</td></tr>
+      <tr><th>-5</th><td>Phone or tablet running APRS software</td></tr>
+      <tr><th>-7</th><td><b>Handheld radio</b> — what this radio usually is</td></tr>
+      <tr><th>-9</th><td>Vehicle / mobile</td></tr>
+      <tr><th>-10</th><td>Internet gateway (iGate)</td></tr>
+    </table>
+
+    <h4>Two radios in the family</h4>
+    <p>Each licensed operator beacons under <b>their own callsign</b>. An APRS position report is a
+    station identification, so a second radio must not go out under someone else's call — even a
+    parent's, even with a different SSID. Give each radio its own callsign, and use the SSID to
+    separate that person's own devices (handheld <code>-7</code>, car <code>-9</code>).</p>
+    <p>Two radios that beacon under the same callsign <i>and</i> the same SSID will fight for the
+    same icon on the map: aprs.fi will show one station teleporting between two places. If that is
+    what you're seeing, it's duplicate SSIDs, not a broken radio.</p>
+    <p>Programming a second radio is otherwise the ordinary flow — connect it, <b>Read radio →
+    compare</b>, write your groups. The channel library and layout on this page are stored in the
+    browser, not the radio, so the same plan can be written to as many radios as you like. Only
+    the APRS page's callsign, SSID and symbol need to differ per radio, and those live on the
+    radio, so remember to <b>Read from radio</b> after connecting a different one — otherwise you
+    are looking at the previous radio's values.</p>
+
+    <h4>How often to beacon</h4>
+    <p>The interval field is in seconds and the radio stores it in steps of ten. The channel is
+    shared by everyone within a hundred miles, so this is a courtesy setting more than a technical
+    one:</p>
+    <table>
+      <tr><th>Fixed / at home</th><td>600–1800 s. A station that isn't moving has nothing new to say.</td></tr>
+      <tr><th>Walking, hiking</th><td>300–600 s.</td></tr>
+      <tr><th>Driving</th><td>60–180 s.</td></tr>
+      <tr><th>Faster than 60 s</th><td>Only for a short, specific reason — a race, a search. Not all day.</td></tr>
+    </table>
+
+    <h4>The rest of the fields</h4>
+    <p><b>Send power/voltage</b> appends the radio's battery voltage to what it sends.
+    <b>Allow position check</b> lets another station poll you for a position instead of waiting for
+    your next beacon. <b>Max forward hops</b> and <b>time to live</b> control forwarding in
+    <i>BSS</i> mesh mode — their meaning is taken from the field names in the reference
+    implementation and has not been verified on hardware, so leave them at whatever the radio
+    shipped with unless you are experimenting with BSS specifically. They are not the APRS path.</p>
+
+    <h4>Proving it worked</h4>
+    <ol>
+      <li>Watch the radio: at the interval you set, it should key up briefly on its own. If it
+      never transmits, the usual causes are share-location off, no GPS fix, or the digital channel
+      not set.</li>
+      <li>Open <a href="https://aprs.fi" target="_blank" rel="noopener">aprs.fi</a> and search your
+      <b>callsign-SSID</b>. A position within a few minutes means the whole chain works.</li>
+      <li>Nothing on aprs.fi but the radio is transmitting? You are probably out of range of an
+      iGate, or the path is empty. Try <code>WIDE1-1,WIDE2-1</code>, and try again from a higher or
+      more open spot before changing anything else.</li>
+      <li>The radio's own screen showing other stations' packets is proof the frequency is right —
+      if you can hear the network, the network can probably hear you.</li>
+    </ol>
+
     <h4>Receiving packets</h4>
     <p>Already works, with no setup beyond being on the right channel. The radio pushes every
     packet it decodes, and they appear on the <b>Protocol log</b> page as
@@ -970,12 +1150,28 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     running, each packet also becomes a row in it with your position attached.</p>
     <p>What you'll see is the raw frame, not a parsed message — AX.25 and APRS decoding on top of
     it isn't built yet. You can usually read callsigns straight out of the ASCII.</p>
+
     <h4>Transmitting packets — experimental</h4>
     <p>The terminal sends raw payload bytes with <code>HT_SEND_DATA</code>, fragments them, and waits
     for each radio acknowledgement before sending the next. It does not build AX.25 or APRS packets
     yet: text mode is useful for compatible experiments; hex mode expects an already-built frame.
     The page blocks a send while the radio reports TX, RX or open squelch and requires typing
     <code>TRANSMIT</code>. Licensing, identification and channel selection remain the operator's job.</p>
+    <p>Ordinary APRS beaconing does <i>not</i> go through this terminal. Beacons are generated by
+    the radio itself from the settings above — the terminal is for hand-built packet experiments.</p>
+
+    <h4>The rules, briefly</h4>
+    <ul>
+      <li>APRS transmit requires an amateur licence, and the packet carries the callsign of the
+      station responsible for it. BSS format is the no-licence path, and it stays inside the
+      Benshi family.</li>
+      <li>The callsign you beacon must be the one you are licensed under. Do not share a callsign
+      between operators.</li>
+      <li>No encryption, no obscured meaning, and nothing commercial — this is a public channel in
+      every sense.</li>
+      <li>Automatic beaconing still identifies you: an unattended radio quietly beaconing your
+      home position all day is legal but tells everyone where you live.</li>
+    </ul>
 
     <h3 id="g-radiomenu">What still has to be set on the radio itself</h3>
     <p>One setting still matters for packet and is not reachable from this page yet:</p>
@@ -2058,7 +2254,8 @@ const LIBRARY = [
   {i:124,n:"GMRS 20",r:462.675,g:"gmrs"},
   {i:125,n:"GMRS 21",r:462.7,g:"gmrs"},
   {i:126,n:"GMRS 22",r:462.725,g:"gmrs"},
-  {i:127,n:"21",r:435.725,g:"sat"}
+  {i:127,n:"21",r:435.725,g:"sat"},
+  {i:128,n:"APRS",r:144.39,s:0,g:"sat",m:"APRS / packet - North America [SAT]"}
 ];
 /* ==LIBRARY-END== */
 
@@ -2155,6 +2352,12 @@ function groupSlots(g){
   if (layout[g].length > n) layout[g] = layout[g].slice(0, n);
   return layout[g];
 }
+/* A slot id of 0 is a real channel -- channel 0 is 2m National -- so an empty
+   slot is `== null` and never a falsy test. `filter(Boolean)` here silently
+   dropped 146.52 from every count and from the write-all group list. */
+const slotsUsed = a => a.filter(x => x != null);
+const anySlot   = a => a.some(x => x != null);
+
 function saveLayout(){
   if (demoMode) return;
   try { localStorage.setItem(LS_LAYOUT, JSON.stringify(layout)); }
@@ -2197,7 +2400,7 @@ function renderGroupTabs(){
   const el = document.getElementById("grpTabs");
   el.innerHTML = "";
   for (let g = 0; g < GROUPS(); g++){
-    const used = groupSlots(g).filter(Boolean).length;
+    const used = slotsUsed(groupSlots(g)).length;
     const b = document.createElement("button");
     b.className = "chip" + (g === curGroup ? " on" : "");
     b.textContent = (regionNames[g] ? `${regionNames[g]} (${g+1})` : `Group ${g+1}`) +
@@ -2211,50 +2414,198 @@ function renderGroupTabs(){
       : `group ${curGroup+1} name: not read yet`;
 }
 
+/* ---------- layout board ----------
+   Two views over the same `layout` object: the classic one-group list, and a
+   board showing every group at once. Slots are drag targets in both -- one
+   slot dropped on another swaps them, so "move into a gap" and "reorder" are
+   the same operation and neither can lose a channel. Library rows are drag
+   sources. Nothing here touches the radio; it all edits the plan.        */
+let boardMode = true;
+
+function slotEl(g, i){
+  const slots = groupSlots(g);
+  const id = slots[i];
+  const c = id == null ? null : libById(id);
+  const div = document.createElement("div");
+  div.className = "slot" + (c ? "" : " empty") +
+    (g === curGroup && i === targetSlot ? " target" : "");
+  const col = !c ? "transparent"
+    : c.lat == null ? "var(--muted)"
+    : (m => m <= 20 ? "var(--ok)" : m <= 35 ? "var(--accent)" : m <= 60 ? "var(--warn)" : "var(--err)")
+      (haversineMi(QTH,[c.lat,c.lon]));
+  const stat = slotStatus(g, i);
+  const r = radioAt(g, i);
+  let badge = "";
+  if (stat === "unread")        badge = "";
+  else if (stat === "match")    badge = c ? `<span class="st match">on radio</span>` : "";
+  else if (stat === "missing")  badge = `<span class="st missing">not written</span>`;
+  else if (stat === "extra")    badge = `<span class="st extra" title="radio holds ${r.name} ${r.rx_freq}">radio: ${r.name||"?"}</span>`;
+  else                          badge = `<span class="st diff" title="${stat.join(', ')}">${stat.length} diff</span>`;
+
+  div.innerHTML =
+    `<span class="n">${i+1}</span>` +
+    `<span class="dot" style="background:${col}"></span>` +
+    `<span class="nm">${c ? `${c.name} <span class="dim">${c.rx_freq.toFixed(3)}</span>`
+                          : (r ? `<span class="dim">radio: ${r.name||"?"} ${r.rx_freq.toFixed(3)}</span>` : "empty")}</span>` +
+    badge +
+    (c ? `<span class="x" title="clear slot">&times;</span>` : "");
+
+  div.draggable = !!c;
+  div.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("text/plain", `slot:${g}:${i}`);
+    e.dataTransfer.effectAllowed = "move";
+    div.classList.add("drag");
+  });
+  div.addEventListener("dragend", () => div.classList.remove("drag"));
+  div.addEventListener("dragover", e => { e.preventDefault(); div.classList.add("over"); });
+  div.addEventListener("dragleave", () => div.classList.remove("over"));
+  div.addEventListener("drop", e => {
+    e.preventDefault(); div.classList.remove("over");
+    const d = (e.dataTransfer.getData("text/plain") || "").split(":");
+    if (d[0] === "slot") swapSlots(+d[1], +d[2], g, i);
+    else if (d[0] === "lib"){
+      groupSlots(g)[i] = +d[1];
+      saveLayout(); renderLayout(); renderRows();
+      const lc = libById(+d[1]);
+      log(`group ${g+1} slot ${i+1} <- ${lc ? lc.name : d[1]}`);
+    }
+  });
+
+  div.onclick = e => {
+    if (e.target.classList.contains("x")){
+      slots[i] = null; saveLayout(); renderLayout(); renderRows(); return;
+    }
+    curGroup = g; targetSlot = i; renderLayout();
+  };
+  if (c) div.title = `${c.name} - RX ${c.rx_freq} / TX ${c.tx_freq}` +
+    (c.site ? ` · ${c.site}` : "") + (c.note ? `\n${c.note}` : "");
+  return div;
+}
+
+function swapSlots(fromG, fromI, toG, toI){
+  if (fromG === toG && fromI === toI) return;
+  const a = groupSlots(fromG), b = groupSlots(toG);
+  const tmp = b[toI]; b[toI] = a[fromI]; a[fromI] = tmp;
+  saveLayout(); renderLayout(); renderRows();
+}
+
 function renderLayout(){
   renderGroupTabs();
   const host = document.getElementById("slots");
-  const slots = groupSlots(curGroup);
   host.innerHTML = "";
-  slots.forEach((id, i) => {
-    const c = id == null ? null : libById(id);
-    const div = document.createElement("div");
-    div.className = "slot" + (c ? "" : " empty") + (i === targetSlot ? " target" : "");
-    const col = !c ? "transparent"
-      : c.lat == null ? "var(--muted)"
-      : (m => m <= 20 ? "var(--ok)" : m <= 35 ? "var(--accent)" : m <= 60 ? "var(--warn)" : "var(--err)")
-        (haversineMi(QTH,[c.lat,c.lon]));
-    const stat = slotStatus(curGroup, i);
-    const r = radioAt(curGroup, i);
-    let badge = "";
-    if (stat === "unread")        badge = "";
-    else if (stat === "match")    badge = c ? `<span class="st match">on radio</span>` : "";
-    else if (stat === "missing")  badge = `<span class="st missing">not written</span>`;
-    else if (stat === "extra")    badge = `<span class="st extra" title="radio holds ${r.name} ${r.rx_freq}">radio: ${r.name||"?"}</span>`;
-    else                          badge = `<span class="st diff" title="${stat.join(', ')}">${stat.length} diff</span>`;
-
-    div.innerHTML =
-      `<span class="n">${i+1}</span>` +
-      `<span class="dot" style="background:${col}"></span>` +
-      `<span class="nm">${c ? `${c.name} <span class="dim">${c.rx_freq.toFixed(3)}</span>`
-                            : (r ? `<span class="dim">radio: ${r.name||"?"} ${r.rx_freq.toFixed(3)}</span>` : "empty")}</span>` +
-      badge +
-      (c ? `<span class="x" title="clear slot">×</span>` : "");
-    div.onclick = e => {
-      if (e.target.classList.contains("x")){
-        slots[i] = null; saveLayout(); renderLayout(); renderRows(); return;
-      }
-      targetSlot = i; renderLayout();
-    };
-    if (c) div.title = `${c.name} — RX ${c.rx_freq} / TX ${c.tx_freq}` +
-      (c.site ? ` · ${c.site}` : "") + (c.note ? `\n${c.note}` : "");
-    host.appendChild(div);
-  });
+  host.className = boardMode ? "board" : "";
+  if (boardMode){
+    for (let g = 0; g < GROUPS(); g++){
+      const used = slotsUsed(groupSlots(g)).length;
+      const col = document.createElement("div");
+      col.className = "gcol" + (g === curGroup ? " cur" : "");
+      const head = document.createElement("div");
+      head.className = "ghead";
+      head.innerHTML = `<b>${regionNames[g] ? regionNames[g] : "Group " + (g+1)}</b>` +
+                       `<span class="dim">${used}/${SLOTS()}</span>`;
+      head.onclick = () => { curGroup = g; targetSlot = 0; renderLayout(); };
+      col.appendChild(head);
+      const body = document.createElement("div");
+      body.className = "gslots";
+      for (let i = 0; i < SLOTS(); i++) body.appendChild(slotEl(g, i));
+      col.appendChild(body);
+      host.appendChild(col);
+    }
+  } else {
+    for (let i = 0; i < SLOTS(); i++) host.appendChild(slotEl(curGroup, i));
+  }
   const canWrite = radio.connected;
-  document.getElementById("btnWriteLayout").disabled = !canWrite || !slots.some(Boolean);
+  document.getElementById("btnWriteLayout").disabled =
+    !canWrite || !anySlot(groupSlots(curGroup));
   document.getElementById("btnWriteAllGroups").disabled =
-    !canWrite || !Object.values(layout).some(a => a && a.some(Boolean));
+    !canWrite || !Object.values(layout).some(a => a && anySlot(a));
   renderRestoreState();
+}
+
+/* ---------- auto-arrange ----------
+   Buckets the library, then lays the buckets into groups. Preferred shape is
+   one bucket per group so a group means something on the radio's screen; if
+   that needs more groups than the radio has, it packs densely instead and
+   says so. Replaces the whole plan, never the radio.                     */
+function autoBuckets(policy){
+  const chans = library.filter(c => c.rx_freq > 0);
+  if (policy === "distance"){
+    const mi = c => c.lat == null ? 1e9 : haversineMi(QTH, [c.lat, c.lon]);
+    return [["nearest first", [...chans].sort((a,b) => mi(a) - mi(b) || a.rx_freq - b.rx_freq)]];
+  }
+  if (policy === "band"){
+    const bandOf = c => c.rx_freq < 100 ? "6 m and below"
+                      : c.rx_freq < 200 ? "2 m"
+                      : c.rx_freq < 300 ? "1.25 m" : "70 cm";
+    return ["2 m", "70 cm", "1.25 m", "6 m and below"]
+      .map(b => [b, chans.filter(c => bandOf(c) === b).sort((x,y) => x.rx_freq - y.rx_freq)])
+      .filter(e => e[1].length);
+  }
+  const keys = [...new Set([...Object.keys(LIB_GROUPS), ...chans.map(c => c.group)])];
+  return keys.map(k => [LIB_GROUPS[k] || k, chans.filter(c => c.group === k)])
+             .filter(e => e[1].length);
+}
+
+function autoArrange(){
+  const policy = document.getElementById("autoPolicy").value;
+  const buckets = autoBuckets(policy);
+  const G = GROUPS(), S = SLOTS();
+  const total = buckets.reduce((n, e) => n + e[1].length, 0);
+  if (total > G * S){
+    log(`auto-arrange: ${total} channels do not fit in ${G} x ${S} = ${G*S} slots`, "l-err");
+    alert(`${total} channels will not fit in ${G} groups of ${S} slots (${G*S} total).\n\n` +
+          `Raise the group or slot count above, or filter the library down first.`);
+    return;
+  }
+  const needed = buckets.reduce((n, e) => n + Math.max(1, Math.ceil(e[1].length / S)), 0);
+  const spaced = needed <= G;
+  const plan = Array.from({ length: G }, () => new Array(S).fill(null));
+  let g = 0, i = 0;
+  for (const entry of buckets){
+    const list = entry[1];
+    /* Start a new group unless this whole bucket still fits in the current
+       one. A bucket larger than a group therefore always begins cleanly and
+       spills into the following groups, instead of starting halfway down. */
+    if (i > 0 && (spaced || i + list.length > S)){ g++; i = 0; }
+    if (g >= G) break;
+    for (const c of list){
+      if (i >= S){ g++; i = 0; }
+      if (g >= G) break;
+      plan[g][i++] = c.channel_id;
+    }
+  }
+  const lines = plan.map((a, n) => {
+    const used = slotsUsed(a).length;
+    if (!used) return `  Group ${n+1}: empty`;
+    const first = libById(a[0]), last = libById(a[used-1]);
+    return `  Group ${n+1}: ${used} ch  ${first ? first.name : "?"} ... ${last ? last.name : "?"}`;
+  }).join("\n");
+  if (!confirm(`Replace the whole plan with this layout?\n\n${lines}\n\n` +
+               `This edits the plan in the browser only. Nothing is sent to the radio ` +
+               `until you press a write button.`)) return;
+  for (let n = 0; n < G; n++) layout[n] = plan[n];
+  curGroup = 0; targetSlot = 0;
+  saveLayout(); renderLayout(); renderRows();
+  log(`auto-arranged ${total} channel(s) into ` +
+      `${plan.filter(anySlot).length} group(s) by ${policy}` +
+      (spaced ? "" : " (packed - not enough groups for one bucket each)"), "l-inf");
+}
+
+function compactGroup(){
+  const s = groupSlots(curGroup);
+  const kept = slotsUsed(s);
+  for (let i = 0; i < s.length; i++) s[i] = i < kept.length ? kept[i] : null;
+  saveLayout(); renderLayout(); renderRows();
+  log(`group ${curGroup+1}: gaps closed, ${kept.length} channel(s)`);
+}
+
+function sortGroup(){
+  const s = groupSlots(curGroup);
+  const kept = slotsUsed(s).map(libById).filter(Boolean)
+    .sort((a, b) => a.rx_freq - b.rx_freq).map(c => c.channel_id);
+  for (let i = 0; i < s.length; i++) s[i] = i < kept.length ? kept[i] : null;
+  saveLayout(); renderLayout(); renderRows();
+  log(`group ${curGroup+1}: sorted by frequency`);
 }
 
 function assignToTarget(channel_id){
@@ -3247,6 +3598,11 @@ function renderRows(){
       `<td>${planCell}</td>` +
       `<td>${stat}</td>`;
     tr.title = c.note || "";
+    tr.draggable = true;
+    tr.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", "lib:" + c.channel_id);
+      e.dataTransfer.effectAllowed = "copy";
+    });
     tr.onclick = e => {
       if (e.target.tagName === "BUTTON"){ assignToTarget(c.channel_id); return; }
       selected = c.channel_id; loadEditor(c); renderRows();
@@ -4116,7 +4472,7 @@ document.getElementById("btnAddShown").onclick = () =>
   document.getElementById("btnFillGroup").click();
 document.getElementById("btnFillGroup").onclick = () => {
   const slots = groupSlots(curGroup);
-  const already = new Set(slots.filter(Boolean));
+  const already = new Set(slotsUsed(slots));
   let placed = 0;
   for (const c of shown()){
     if (already.has(c.channel_id)) continue;      // don't duplicate within one group
@@ -4130,6 +4486,12 @@ document.getElementById("btnFillGroup").onclick = () => {
       (left > 0 ? ` — ${left} did not fit; put them in another group` : ""),
       left > 0 ? "l-err" : "l-inf");
 };
+document.getElementById("btnAuto").onclick = autoArrange;
+document.getElementById("btnCompact").onclick = compactGroup;
+document.getElementById("btnSortGroup").onclick = sortGroup;
+document.getElementById("boardToggle").onchange = e => {
+  boardMode = e.target.checked; renderLayout();
+};
 document.getElementById("btnClearGroup").onclick = () => {
   if (!confirm(`Clear every slot in group ${curGroup+1}? This only edits the plan, not the radio.`)) return;
   layout[curGroup] = new Array(SLOTS()).fill(null);
@@ -4138,7 +4500,7 @@ document.getElementById("btnClearGroup").onclick = () => {
 document.getElementById("btnWriteLayout").onclick = () =>
   writeGroup(curGroup).then(()=>readAll()).catch(e=>log(e.message,"l-err"));
 document.getElementById("btnWriteAllGroups").onclick = async () => {
-  const gs = [...Array(GROUPS()).keys()].filter(g => groupSlots(g).some(Boolean));
+  const gs = [...Array(GROUPS()).keys()].filter(g => anySlot(groupSlots(g)));
   const token=`WRITE ALL ${gs.map(g=>g+1).join(",")}`;
   if (prompt(`This will change radio groups ${gs.map(g=>g+1).join(", ")}. Each group will be backed up first.\n\n` +
              `Type ${token} to continue:`) !== token) return;

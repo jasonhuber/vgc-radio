@@ -145,6 +145,7 @@ function siteFor(comment) {
 
 // Group assignment. Order matters -- first match wins.
 function groupOf(id, rx, comment, name) {
+  if (/\[SAT/i.test(comment)) return "sat";   // explicit tag wins over the frequency rule
   if (id >= 105 && id <= 126) return "gmrs";
   if (rx >= 430 && rx <= 440 && id >= 127) return "sat";
   if (/\[TRAVEL/i.test(comment)) return "travel";
