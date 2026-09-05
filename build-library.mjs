@@ -6,7 +6,9 @@
      node build-library.mjs --write    # rewrite the LIBRARY block in vgc-programmer.html
 
    Groups come from the structure documented in ../00-README.md plus the
-   [TRAVEL] tags already in the CSV comments.                              */
+   [TRAVEL] tags already in the CSV comments. [MUTE] in a comment sets the
+   channel's mute bit, which silences speaker audio on that channel while
+   the radio still receives and decodes on it.                             */
 import { readFileSync, writeFileSync } from "node:fs";
 
 const CSV = new URL("../03-Codeplugs/Current/MASTER-Channel-List-CORRECTED.csv", import.meta.url);
@@ -109,7 +111,20 @@ const SITES = {
   "maricopa":   [33.0581, -112.0476, "Maricopa"],
   "laveen":     [33.3630, -112.1690, "Laveen"],
   "payson":     [34.2310, -111.3470, "Payson"],
-  "overgaard":  [34.4130, -110.5540, "Overgaard"]
+  "overgaard":  [34.4130, -110.5540, "Overgaard"],
+
+  /* White Mountains / Greer -- added 2026-09-03 for the Hoyer trip.
+     Greens Peak, Porter Mtn and South Mtn are summit coordinates from
+     USGS/PeakVisor and are good. Concho and St Johns are the town or
+     plant the coordinator names, not surveyed antennas. Cooley Mtn and
+     Show Low are estimates. See ../Hoyer-Greer-Path-Analysis.md. */
+  "greens peak":      [34.1120, -109.5743, "Greens Peak"],
+  "south mtn alpine": [33.8270, -109.1667, "South Mtn (Alpine)"],
+  "porter mtn":       [34.2059, -109.9429, "Porter Mtn"],
+  "cooley mtn":       [34.0600, -109.9000, "Cooley Mtn"],
+  "concho":           [34.4747, -109.6103, "Concho"],
+  "st johns":         [34.5780, -109.2980, "St Johns"],
+  "show low":         [34.2542, -110.0298, "Show Low"]
 };
 
 const QTH = [33.250279, -111.882017];
@@ -148,6 +163,7 @@ function groupOf(id, rx, comment, name) {
   if (/\[SAT/i.test(comment)) return "sat";   // explicit tag wins over the frequency rule
   if (id >= 105 && id <= 126) return "gmrs";
   if (rx >= 430 && rx <= 440 && id >= 127) return "sat";
+  if (/\[WHITEMTN/i.test(comment)) return "whitemtn";
   if (/\[TRAVEL/i.test(comment)) return "travel";
   const simplex = !/[+-]/.test((ix.Duplex != null ? "" : ""));   // resolved by caller
   return null;   // caller fills simplex vs metro
@@ -189,6 +205,7 @@ for (let i = 1; i < lines.length; i++) {
     bw: get("Mode").toUpperCase().includes("N") ? 0 : 1,
     pwr: powerFromCsv(get("Power")),
     scan: get("Skip").toUpperCase() !== "S",
+    mute: /\[MUTE/i.test(comment),
     note: comment.replace(/&amp;/g, "&").replace(/\s+/g, " ").trim(),
     site: site ? site[2] : null,
     lat:  site ? site[0] : null,
@@ -206,6 +223,7 @@ const GROUPS = {
   simplex: "Simplex",
   metro:   "Phoenix Metro",
   travel:  "Rim Country (travel)",
+  whitemtn:"White Mountains (Greer)",
   gmrs:    "GMRS / FRS",
   sat:     "Satellite"
 };
@@ -249,6 +267,7 @@ if (process.argv.includes("--write")) {
       c.bw !== 1 ? `w:${c.bw}` : null,
       c.pwr !== "high" ? `p:${JSON.stringify(c.pwr)}` : null,
       c.scan ? null : `s:0`,
+      c.mute ? `u:1` : null,
       `g:${JSON.stringify(c.group)}`,
       c.site ? `k:${JSON.stringify(c.site)}` : null,
       c.lat != null ? `y:${c.lat}` : null,

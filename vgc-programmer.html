@@ -10,13 +10,13 @@
 <meta property="og:title" content="N7WGP · VGC/Benshi Radio Programmer">
 <meta property="og:description" content="Browser-based channel programming, APRS setup and field coverage mapping for VGC/Benshi radios.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://n7wgp.com/">
-<meta property="og:image" content="https://n7wgp.com/og.png">
+<meta property="og:url" content="https://n7wgp.com/n76/">
+<meta property="og:image" content="https://n7wgp.com/n76/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="N7WGP · VGC/Benshi Radio Programmer">
 <meta name="twitter:description" content="Program · APRS · Coverage">
-<meta name="twitter:image" content="https://n7wgp.com/og.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<meta name="twitter:image" content="https://n7wgp.com/n76/og.png">
+<link rel="manifest" href="/n76/manifest.webmanifest">
 <!-- Everything is inlined: the page loads no asset from any other origin. The only network
      calls it ever makes are to its own /api for sign-in, coverage sync and list review. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c6fd6'/%3E%3Cpath d='M16 25V12' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='8.5' r='2.5' fill='white'/%3E%3Cpath d='M10.4 24.6a8 8 0 0 1 0-11.3M21.6 13.3a8 8 0 0 1 0 11.3' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -41,6 +41,8 @@ header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
 header h1{font-size:15px;margin:0;font-weight:650}
 header .call{font:700 13px/1 var(--mono);color:var(--accent);letter-spacing:.04em}
 header .sub{font:400 12px/1 var(--mono);color:var(--muted)}
+header .home{font:600 12px/1 var(--mono);color:var(--muted);text-decoration:none}
+header .home:hover{color:var(--accent)}
 #who{margin-left:auto}
 #status{font:600 12px/1 var(--mono);padding:5px 10px;border-radius:999px;
   border:1px solid var(--line);color:var(--muted)}
@@ -184,6 +186,18 @@ td.num{text-align:right}
 #log{font:11px/1.55 var(--mono);background:var(--sunk);border:1px solid var(--line);
   border-radius:8px;padding:10px;height:170px;overflow-y:auto;white-space:pre-wrap}
 .l-tx{color:var(--accent)} .l-rx{color:var(--ok)} .l-err{color:var(--err)} .l-inf{color:var(--muted)}
+#logDock{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--panel);
+  border-top:1px solid var(--line);font:11px/1.55 var(--mono);box-shadow:0 -6px 18px rgba(0,0,0,.3)}
+#logDockBar{display:flex;align-items:center;gap:9px;padding:5px 12px;cursor:pointer}
+#logDockBar .ttl{flex:none;color:var(--muted);font-weight:650;text-transform:uppercase;letter-spacing:.05em}
+#logDockLast{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#logDockBar button{padding:1px 8px;font:11px var(--mono)}
+#logDockBody{height:190px;overflow-y:auto;padding:8px 12px;white-space:pre-wrap;
+  background:var(--sunk);border-top:1px solid var(--line)}
+#logDock.collapsed #logDockBody{display:none}
+body.dock main{padding-bottom:48px}
+body.dock.dockopen main{padding-bottom:252px}
+@media(max-width:640px){#logDockBody{height:132px} body.dock.dockopen main{padding-bottom:194px}}
 .note{font-size:12px;color:var(--muted);margin:8px 0 0}
 kbd{font:11px var(--mono);border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--bg)}
 #gate{padding:18px;max-width:660px;margin:40px auto;background:var(--panel);
@@ -255,6 +269,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
 <body>
 
 <header>
+  <a class="home" href="/">← All radios</a>
   <h1>VR-N76 Programmer</h1>
   <span class="call">N7WGP</span>
   <span class="sub">DM43bg · Chandler, AZ</span>
@@ -688,6 +703,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     <div class="row" style="margin-bottom:10px">
       <label class="row" style="gap:5px;font-size:12px;color:var(--muted)">
         <input id="boardToggle" type="checkbox" checked style="width:auto"> show every group</label>
+      <button id="btnUndo" disabled title="Nothing to undo">\u21b6 Undo</button>
       <button id="btnFillGroup">Fill empty slots from shown list</button>
       <button id="btnCompact">Close gaps</button>
       <button id="btnSortGroup">Sort by frequency</button>
@@ -776,6 +792,7 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <div class="f"><label>Bandwidth</label><select id="e_bw"><option value="1">Wide (25k)</option><option value="0">Narrow (12.5k)</option></select></div>
       <div class="f"><label>TX power</label><select id="e_pwr"><option value="high">High</option><option value="med">Medium</option><option value="low">Low</option></select></div>
       <div class="f"><label>Scan</label><select id="e_scan"><option value="1">Include</option><option value="0">Skip</option></select></div>
+      <div class="f"><label>Speaker</label><select id="e_mute"><option value="0">Audible</option><option value="1">Muted</option></select></div>
       <div class="f"><label>Group</label><select id="e_grp"></select></div>
     </div>
     <div class="row" style="margin-top:12px">
@@ -783,7 +800,9 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       <button id="btnWriteOne" class="danger" disabled>Write this channel → radio</button>
       <button id="btnReadOne" disabled>Read this channel from radio</button>
     </div>
-    <p class="note">Tone syntax: <kbd>88.5</kbd> CTCSS · <kbd>D023</kbd> DCS · empty = none.
+    <p class="note"><b>Speaker: Muted</b> keeps the radio receiving and decoding on the channel
+    but stops it putting the audio through the speaker — the fix for a packet channel that
+    chatters at you. Tone syntax: <kbd>88.5</kbd> CTCSS · <kbd>D023</kbd> DCS · empty = none.
     TX and RX are independent, so odd splits just work. Direct radio read/write uses the selected
     radio group and treats Channel # as a zero-based radio slot (so 0 means slot 1). A direct write
     backs up the entire selected group and requires its exact group:slot destination.</p>
@@ -1190,6 +1209,27 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
       → Digital Channel</b>. In North America APRS lives on <b>144.390 MHz</b>. Part of the
       general radio settings page, which isn't built.</li>
     </ul>
+    <div class="callout"><b>Check what that setting actually points at before you trust it.</b>
+    The picker shows each candidate's frequency as you scroll it. A Digital Channel left on some
+    unrelated simplex slot is the single most likely reason a correctly configured radio never
+    appears on the map: everything on the APRS page reads right, the radio beacons on schedule,
+    and the packets go out on a frequency nobody is listening to. Verified twice on this station's
+    two VR-N76s — once at 147.580, once at 147.500.</div>
+
+    <h4>The Digital Channel is a third receiver</h4>
+    <p>Once it points somewhere real, expect noise. The Digital Channel is monitored continuously
+    in the background, <b>independently of what A and B are tuned to</b>, and by default the radio
+    puts every packet burst it decodes through the speaker. Retuning A and B does not stop it —
+    144.390 is the busiest 2&nbsp;m frequency in North America and it will chatter at you all day.</p>
+    <p>The fix is per-channel, and it is in the <a href="#" data-go="channels">channel editor</a>:
+    set <b>Speaker</b> to <b>Muted</b> on the packet channel and write it. The radio keeps
+    receiving and decoding; it just stops making noise about it. Do <i>not</i> turn off Digital
+    Mode to get silence — that is the same switch that generates your beacon, and you will go off
+    the map. Squelch will not help either: packet bursts are full-quieting and break any squelch
+    setting you can dial in.</p>
+    <p>In the channel library this rides on a <code>[MUTE]</code> tag in the CSV comment, the same
+    way <code>[SAT]</code> and <code>[TRAVEL]</code> set groups, so the APRS channel ships muted
+    and stays that way through a rebuild.</p>
     <p>Also on the radio, not here: volume, squelch level, mic gain, dual watch, and the scan
     start/stop button itself.</p>
 
@@ -1264,6 +1304,16 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
   Not affiliated with VGC / Vero Telecom. Writing bad values to a radio is your
   responsibility. Transmit only where you are licensed.
 </footer>
+
+<div id="logDock" class="collapsed">
+  <div id="logDockBar" title="Show or hide the live protocol log">
+    <span class="ttl">Log</span>
+    <span id="logDockLast" class="l-inf">waiting…</span>
+    <button id="logDockClear" type="button">Clear</button>
+    <button id="logDockToggle" type="button" aria-expanded="false">▲</button>
+  </div>
+  <div id="logDockBody"></div>
+</div>
 
 <script>
 "use strict";
@@ -1514,11 +1564,24 @@ const radio = {
 };
 
 function log(msg, cls="l-inf"){
-  const el = document.getElementById("log");
   const t = new Date().toTimeString().slice(0,8);
+  const line = `[${t}] ${msg}`;
+  const el = document.getElementById("log");
   const div = document.createElement("div");
-  div.className = cls; div.textContent = `[${t}] ${msg}`;
+  div.className = cls; div.textContent = line;
   el.appendChild(div); el.scrollTop = el.scrollHeight;
+  /* Mirror into the dock so the log is readable from every page -- the write
+     you are watching and the page you are on are never the same one. */
+  const body = document.getElementById("logDockBody");
+  if (body){
+    const d2 = document.createElement("div");
+    d2.className = cls; d2.textContent = line;
+    body.appendChild(d2);
+    while (body.childElementCount > 400) body.removeChild(body.firstChild);
+    body.scrollTop = body.scrollHeight;
+    const last = document.getElementById("logDockLast");
+    last.className = cls; last.textContent = line;
+  }
 }
 const hex = u8 => Array.from(u8).map(b=>b.toString(16).padStart(2,"0")).join(" ");
 const showRaw = () => document.getElementById("chkRaw").checked;
@@ -1562,7 +1625,7 @@ function explain(e){
       "The radio may advertise under a different name. Try <b>Show all Bluetooth devices</b>, " +
       "and make sure the radio is <b>on</b>, <b>close by</b>, and <b>not connected to the VGC phone app</b>."];
   if (name === "SecurityError")
-    return ["Blocked by the browser.", "Web Bluetooth needs https:// — reload the page from https://n7wgp.com."];
+    return ["Blocked by the browser.", "Web Bluetooth needs https:// — reload the page from https://n7wgp.com/n76/."];
   if (name === "NotSupportedError")
     return ["This browser will not do Web Bluetooth.", "Use Chrome, Edge, or Brave on desktop or Android. iOS cannot do this at all."];
   if (name === "NetworkError")
@@ -1612,7 +1675,14 @@ async function connect(showAll){
     log(`note: "${radio.device.name}" does not look like a Benshi radio — if this is not the ` +
         `VR-N76, press Connect again and pick a different device`, "l-err");
   radio.device.addEventListener("gattserverdisconnected", onDropped);
+  await linkUp();
+}
 
+/* Everything after the device has been picked: the connect/settle/discover
+   retry, the characteristics, the event subscriptions. Split out of connect()
+   so resumeLink() can run it again after a drop without a user gesture --
+   permission for an already-chosen device survives the disconnect. */
+async function linkUp({ readDevInfo = true } = {}){
   /* The radio accepts the link and then drops it within a second if service
      discovery starts immediately -- the classic "connected, then gone"
      BLE pattern. So retry the WHOLE sequence (connect + settle + discover),
@@ -1662,10 +1732,22 @@ async function connect(showAll){
   setStatus("connected", "on");
   log("GATT up; indications subscribed", "l-rx");
   setConnectedUI(true);
-  await getDevInfo();
+  if (readDevInfo) await getDevInfo();
   for (const t of [EVENT.HT_STATUS_CHANGED, EVENT.HT_CH_CHANGED, EVENT.DATA_RXD])
     await registerEvent(t);
   startLive();
+}
+
+/* One automatic reconnect after the link drops mid-operation. Observed
+   2026-09-03: a full write pass followed by a full read pass is ~45s of
+   uninterrupted GATT traffic, and the radio dropped the link partway through
+   the last group. The device info is already known, so skip re-reading it and
+   get back to the channel the caller was on. */
+async function resumeLink(){
+  if (!radio.device) return false;
+  log("reconnecting…", "l-err");
+  try { await linkUp({ readDevInfo:false }); log("link back up — resuming", "l-rx"); return true; }
+  catch(e){ log(`reconnect failed: ${e.message}`, "l-err"); return false; }
 }
 
 function setConnectedUI(on){
@@ -1752,6 +1834,25 @@ function handleEvent(m){
   }
 }
 
+/* Web Bluetooth permits exactly ONE GATT operation in flight per device. A
+   second writeValue issued while another is pending does not queue -- it
+   throws "GATT operation already in progress." Nothing here serialised them,
+   so the status poll in startLive() (every 4s, 1.2s with coverage on) could
+   land in the middle of a bulk write and kill it. That is what ended the
+   2026-09-03 "write all groups" run: group 4 wrote fine, then a poll tick
+   collided with the group 5 backup read and the whole pass stopped.
+   Every path that touches radio.chWrite goes through this queue. */
+let gattChain = Promise.resolve();
+let gattPending = 0;
+function gattOp(fn){
+  gattPending++;
+  /* .then(fn, fn) so one failed operation does not wedge the chain. */
+  const run = gattChain.then(fn, fn);
+  gattChain = run.then(()=>{}, ()=>{});
+  run.then(()=>{ gattPending--; }, ()=>{ gattPending--; });
+  return run;
+}
+
 function request(command, bytes, timeoutMs=5000){
   return new Promise((resolve,reject)=>{
     if (!radio.connected) return reject(new Error("not connected"));
@@ -1765,7 +1866,7 @@ function request(command, bytes, timeoutMs=5000){
       reject:e=>{ clearTimeout(timer); reject(e); }
     });
     if (showRaw()) log("TX " + hex(bytes), "l-tx");
-    radio.chWrite.writeValueWithResponse(bytes).catch(e=>{
+    gattOp(() => radio.chWrite.writeValueWithResponse(bytes)).catch(e=>{
       clearTimeout(timer); radio.pending.delete(command); reject(e);
     });
   });
@@ -1778,7 +1879,7 @@ function request(command, bytes, timeoutMs=5000){
 function sendNoReply(bytes){
   if (!radio.connected) return Promise.reject(new Error("not connected"));
   if (showRaw()) log("TX " + hex(bytes), "l-tx");
-  return radio.chWrite.writeValueWithResponse(bytes);
+  return gattOp(() => radio.chWrite.writeValueWithResponse(bytes));
 }
 
 let devInfo = null;
@@ -1983,6 +2084,10 @@ function startLive(){
      not the only source. */
   statusTimer = setInterval(() => {
     if (!radio.connected) return;
+    /* The queue makes a collision harmless, but a bulk write is hundreds of
+       queued operations deep -- a status request joining that queue answers
+       long after it was worth having. Skip the tick instead. */
+    if (gattPending) return;
     getHtStatus().catch(()=>{});
   }, cov.on ? 1200 : 4000);
   getHtStatus().catch(e=>log(`status unavailable: ${e.message}`, "l-err"));
@@ -1997,8 +2102,8 @@ function stopLive(){
 async function registerEvent(type){
   try {
     if (showRaw()) log(`registering for event ${type}`, "l-tx");
-    await radio.chWrite.writeValueWithResponse(
-      buildMessage(CMD.REGISTER_NOTIFICATION, w => w.int(type,8)));
+    await gattOp(() => radio.chWrite.writeValueWithResponse(
+      buildMessage(CMD.REGISTER_NOTIFICATION, w => w.int(type,8))));
   } catch(e){ log(`could not register event ${type}: ${e.message}`, "l-err"); }
 }
 
@@ -2138,7 +2243,7 @@ async function sendTncData(data, channelId=null){
 }
 
 /* ==LIBRARY-START== generated by build-library.mjs -- do not hand-edit */
-const LIB_GROUPS = {"simplex":"Simplex","metro":"Phoenix Metro","travel":"Rim Country (travel)","gmrs":"GMRS / FRS","sat":"Satellite"};
+const LIB_GROUPS = {"simplex":"Simplex","metro":"Phoenix Metro","travel":"Rim Country (travel)","whitemtn":"White Mountains (Greer)","gmrs":"GMRS / FRS","sat":"Satellite"};
 const LIBRARY = [
   {i:0,n:"2m Natl",r:146.52,g:"simplex"},
   {i:1,n:"2m Simp",r:146.4,g:"simplex"},
@@ -2265,7 +2370,22 @@ const LIBRARY = [
   {i:125,n:"GMRS 21",r:462.7,g:"gmrs"},
   {i:126,n:"GMRS 22",r:462.725,g:"gmrs"},
   {i:127,n:"21",r:435.725,g:"sat"},
-  {i:128,n:"APRS",r:144.39,s:0,g:"sat",m:"APRS / packet - North America [SAT]"}
+  {i:128,n:"APRS",r:144.39,s:0,u:1,g:"sat",m:"APRS / packet - North America [SAT] [MUTE]"},
+  {i:129,n:"W7EH GP",r:145.31,t:144.71,a:{c:110.9},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, Kachina ARC linked [WHITEMTN 8.7mi from Hoyer]"},
+  {i:130,n:"K7EAR GP",r:146.7,t:146.1,a:{c:141.3},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, EAARS linked into NM [WHITEMTN 8.7mi from Hoyer]"},
+  {i:131,n:"W7ARA GP",r:146.72,t:146.12,a:{c:162.2},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, ARA Rimlink [WHITEMTN 8.7mi from Hoyer]"},
+  {i:132,n:"N7OEI GP",r:146.9,t:146.3,a:{c:110.9},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, coordinator-listed not in RepeaterBook [WHITEMTN 8.7mi from Hoyer]"},
+  {i:133,n:"ARA GP U",r:448.375,t:443.375,a:{c:100},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, ARA linked UHF [WHITEMTN 8.7mi from Hoyer]"},
+  {i:134,n:"OEI GP U",r:449.3,t:444.3,a:{c:110.9},g:"whitemtn",k:"Greens Peak",y:34.112,x:-109.5743,m:"Greens Peak, autopatch UHF [WHITEMTN 8.7mi from Hoyer]"},
+  {i:135,n:"K7SRS AL",r:145.25,t:144.65,a:{c:110.9},g:"whitemtn",k:"South Mtn (Alpine)",y:33.827,x:-109.1667,m:"South Mtn Alpine, K7SRS [WHITEMTN 22mi from Hoyer]"},
+  {i:136,n:"K7EAR AL",r:145.27,t:144.67,a:{c:141.3},g:"whitemtn",k:"South Mtn (Alpine)",y:33.827,x:-109.1667,m:"South Mtn Alpine, EAARS [WHITEMTN 22mi from Hoyer]"},
+  {i:137,n:"SRS AL U",r:447.075,t:442.075,a:{c:110.9},g:"whitemtn",k:"South Mtn (Alpine)",y:33.827,x:-109.1667,m:"South Mtn Alpine, UHF [WHITEMTN 22mi from Hoyer MARGINAL]"},
+  {i:138,n:"K7BUM CO",r:146.66,t:146.06,a:{c:110.9},g:"whitemtn",k:"Concho",y:34.4747,x:-109.6103,m:"Concho, K7BUM Concho Valley [WHITEMTN 32mi from Hoyer]"},
+  {i:139,n:"W7AGM CO",r:146.84,t:146.24,a:{c:100},g:"whitemtn",k:"Concho",y:34.4747,x:-109.6103,m:"Concho, W7AGM [WHITEMTN 32mi from Hoyer]"},
+  {i:140,n:"GVK STJ",r:446.825,t:441.825,a:{c:94.8},g:"whitemtn",k:"St Johns",y:34.578,x:-109.298,m:"St Johns, Coronado plant D-STAR capable [WHITEMTN 39mi from Hoyer]"},
+  {i:141,n:"AD7W PM",r:146.76,t:146.16,a:{c:162.2},g:"whitemtn",k:"Porter Mtn",y:34.2059,x:-109.9429,m:"Porter Mtn, Pinetop [WHITEMTN 30mi from Hoyer VERIFY OFFSET -0.6 vs -0.4]"},
+  {i:142,n:"W7EH CM",r:147.38,t:147.98,a:{c:110.9},g:"whitemtn",k:"Cooley Mtn",y:34.06,x:-109.9,m:"Cooley Mtn, Kachina linked [WHITEMTN ~26mi from Hoyer coord unverified]"},
+  {i:143,n:"W7EH SL",r:449.15,t:444.15,a:{c:110.9},g:"whitemtn",k:"Show Low",y:34.2542,x:-110.0298,m:"Show Low, Kachina [WHITEMTN ~40mi from Hoyer unverified]"}
 ];
 /* ==LIBRARY-END== */
 
@@ -2303,7 +2423,8 @@ function fromLib(e){
     lat:  e.y != null ? e.y : null,
     lon:  e.x != null ? e.x : null,
     tx_mod:0, rx_mod:0, talk_around:false, pre_de_emph_bypass:false, sign:false,
-    tx_disable:false, fixed_freq:false, fixed_bandwidth:false, fixed_tx_power:false, mute:false
+    tx_disable:false, fixed_freq:false, fixed_bandwidth:false, fixed_tx_power:false,
+    mute: e.u === 1
   };
 }
 /* the radio wants explicit power booleans */
@@ -2369,6 +2490,7 @@ const slotsUsed = a => a.filter(x => x != null);
 const anySlot   = a => a.some(x => x != null);
 
 function saveLayout(){
+  pushUndo();
   if (demoMode) return;
   try { localStorage.setItem(LS_LAYOUT, JSON.stringify(layout)); }
   catch(e){ log("could not save layout: "+e.message, "l-err"); }
@@ -2392,6 +2514,58 @@ function loadLayout(){
   seed(1, near);
   seed(2, byGroup("gmrs"));
   seed(3, byGroup("travel").concat(byGroup("sat")));
+}
+
+/* ---------- layout undo ----------
+   Every layout mutation in this app funnels through saveLayout(), so one hook
+   there captures history without touching the two dozen call sites that write
+   into `layout`. `layoutShadow` is the last committed state; saveLayout runs
+   AFTER the mutation, so the shadow still holds the before-image at that
+   moment -- push it, then re-shadow. That is the whole trick.
+
+   Undo restores the plan only. It never touches the radio, because nothing in
+   the layout editor ever did. */
+const UNDO_MAX = 100;
+let undoStack = [], layoutShadow = null;
+const cloneLayout = l => JSON.parse(JSON.stringify(l || {}));
+
+function initUndo(){ undoStack = []; layoutShadow = cloneLayout(layout); renderUndo(); }
+
+function pushUndo(){
+  if (layoutShadow !== null){
+    const before = JSON.stringify(layoutShadow);
+    if (before !== JSON.stringify(layout)){        // no-op saves add no history
+      undoStack.push(layoutShadow);
+      if (undoStack.length > UNDO_MAX) undoStack.shift();
+    }
+  }
+  layoutShadow = cloneLayout(layout);
+  renderUndo();
+}
+
+function undoLayout(){
+  if (!undoStack.length){ log("nothing to undo", "l-inf"); return; }
+  const prev = undoStack.pop();
+  layout = cloneLayout(prev);
+  layoutShadow = cloneLayout(prev);
+  if (!demoMode){
+    try { localStorage.setItem(LS_LAYOUT, JSON.stringify(layout)); }
+    catch(e){ log("could not save layout: "+e.message, "l-err"); }
+  }
+  if (curGroup >= GROUPS()) curGroup = GROUPS() - 1;
+  targetSlot = Math.min(targetSlot, SLOTS() - 1);
+  renderLayout(); renderRows(); renderUndo();
+  log(`undo \u2014 layout restored (${undoStack.length} step${undoStack.length===1?"":"s"} left)`, "l-inf");
+}
+
+function renderUndo(){
+  const b = document.getElementById("btnUndo");
+  if (!b) return;
+  const n = undoStack.length;
+  b.disabled = !n;
+  b.textContent = n ? `\u21b6 Undo (${n})` : "\u21b6 Undo";
+  b.title = n ? "Undo the last layout change. Plan only \u2014 never touches the radio."
+              : "Nothing to undo";
 }
 
 const libById = id => library.find(c => c.channel_id === id) || null;
@@ -3644,6 +3818,7 @@ function loadEditor(c){
   g("e_bw").value = String(c.bandwidth|0);
   g("e_pwr").value = c.power;
   g("e_scan").value = c.scan ? "1" : "0";
+  g("e_mute").value = c.mute ? "1" : "0";
   g("e_grp").value = c.group;
 }
 function editorToChannel(){
@@ -3662,6 +3837,7 @@ function editorToChannel(){
     bandwidth: parseInt(g("e_bw"),10),
     power: g("e_pwr"),
     scan: g("e_scan")==="1",
+    mute: g("e_mute")==="1",
     group: g("e_grp")
   });
 }
@@ -3826,6 +4002,9 @@ async function readAll(){
   prog.classList.remove("hidden"); prog.max = count * groups; prog.value = 0;
   onRadio.clear();
   let total = 0, done = 0, readGroups = 0;
+  /* One reconnect per read pass. More than that and a radio that is genuinely
+     gone turns into an unbounded reconnect loop. */
+  let relinked = false, linkLost = false;
 
   for (let g = 0; g < groups; g++){
     if (groups > 1){
@@ -3842,6 +4021,16 @@ async function readAll(){
         const c = await readChannel(i);
         if (c.rx_freq > 0){ slots.set(i, c); total++; }
       } catch(e){
+        /* A dropped link fails every remaining slot instantly, which buried
+           the real error under a screenful of "not connected". Stop, try to
+           get the link back once, and pick up at the same slot. */
+        if (!radio.connected){
+          log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err");
+          if (relinked || !(await resumeLink())){ linkLost = true; break; }
+          relinked = true;
+          if (groups > 1){ try { await setRegion(g); } catch(_){} }
+          i--; continue;
+        }
         if (!/NOT_SUPPORTED|INVALID_PARAMETER/.test(e.message))
           log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err");
       }
@@ -3850,13 +4039,18 @@ async function readAll(){
     }
     onRadio.set(g, slots);
     readGroups++;
-    log(`  group ${g+1}: ${slots.size} programmed`, "l-rx");
+    log(`  group ${g+1}: ${slots.size} programmed${linkLost ? " (partial — link dropped)" : ""}`,
+        linkLost ? "l-err" : "l-rx");
+    if (linkLost) break;
   }
 
   if (groups > 1){ try { await setRegion(curGroup); } catch(e){} }
   prog.classList.add("hidden");
   renderRows(); renderLayout();
-  log(`read ${total} programmed channels across ${readGroups} group(s)`, "l-rx");
+  log(`read ${total} programmed channels across ${readGroups} group(s)` +
+      (linkLost ? ` — STOPPED EARLY, the link dropped and ${groups - readGroups} group(s) were not read`
+                : ""),
+      linkLost ? "l-err" : "l-rx");
 }
 
 function radioCapacity(){ return devInfo?.channel_count || null; }
@@ -3894,12 +4088,14 @@ async function writeGroup(g, { confirmFirst = true, skipBackup = false, clearRes
 
   if (!skipBackup){
     try { await captureRadioGroup(g); }
-    catch(e){ log(`write stopped — group ${g+1} backup failed: ${e.message}`, "l-err"); return {ok:0,bad:0}; }
+    catch(e){ log(`write stopped — group ${g+1} backup failed: ${e.message}`, "l-err");
+              return {ok:0,bad:0,aborted:`backup failed: ${e.message}`}; }
   }
 
   if (GROUPS() > 1){
     try { await setRegion(g); log(`switched to radio group ${g+1}`); }
-    catch(e){ log(`could not switch to group ${g+1}: ${e.message}`, "l-err"); return { ok:0, bad:0 }; }
+    catch(e){ log(`could not switch to group ${g+1}: ${e.message}`, "l-err");
+              return { ok:0, bad:0, aborted:`group switch failed: ${e.message}` }; }
   }
 
   const prog = document.getElementById("prog");
@@ -3912,7 +4108,16 @@ async function writeGroup(g, { confirmFirst = true, skipBackup = false, clearRes
       await writeChannel(toRadio(rec));
       ok++; if (blank) cleared++;
       log(`group ${g+1} slot ${i+1} ${blank ? "cleared" : "← " + c.name}`, "l-rx");
-    } catch(e){ bad++; log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err"); }
+    } catch(e){
+      bad++; log(`group ${g+1} slot ${i+1}: ${e.message}`, "l-err");
+      /* Never keep writing into a dead link: every later slot fails instantly
+         and the summary would count them as real write failures. */
+      if (!radio.connected){
+        prog.classList.add("hidden");
+        log(`group ${g+1}: write stopped at slot ${i+1} — link dropped`, "l-err");
+        return { ok, bad, aborted:`link dropped at slot ${i+1}` };
+      }
+    }
     prog.value = ok + bad;
   }
   prog.classList.add("hidden");
@@ -4489,6 +4694,35 @@ document.getElementById("btnReset").onclick = () => {
   saveLibrary(); fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
   log(`reset to built-in library (${library.length} channels)`);
 };
+/* ---------- docked log ---------- */
+(function(){
+  const dock = document.getElementById("logDock");
+  const body = document.getElementById("logDockBody");
+  const tog  = document.getElementById("logDockToggle");
+  const KEY  = "vgc.logdock";
+  document.body.classList.add("dock");
+  const setOpen = open => {
+    dock.classList.toggle("collapsed", !open);
+    document.body.classList.toggle("dockopen", open);
+    tog.textContent = open ? "▼" : "▲";
+    tog.setAttribute("aria-expanded", String(open));
+    if (open) body.scrollTop = body.scrollHeight;
+    try { localStorage.setItem(KEY, open ? "1" : "0"); } catch(e){}
+  };
+  let open = false;
+  try { open = localStorage.getItem(KEY) === "1"; } catch(e){}
+  setOpen(open);
+  document.getElementById("logDockBar").onclick = e => {
+    if (e.target.id === "logDockClear") return;
+    setOpen(dock.classList.contains("collapsed"));
+  };
+  document.getElementById("logDockClear").onclick = () => {
+    body.innerHTML = "";
+    const last = document.getElementById("logDockLast");
+    last.className = "l-inf"; last.textContent = "cleared";
+  };
+})();
+
 document.getElementById("btnClearLog").onclick = () =>
   document.getElementById("log").innerHTML = "";
 
@@ -4520,6 +4754,15 @@ document.getElementById("btnFillGroup").onclick = () => {
       (left > 0 ? ` — ${left} did not fit; put them in another group` : ""),
       left > 0 ? "l-err" : "l-inf");
 };
+document.getElementById("btnUndo").onclick = undoLayout;
+/* Ctrl/Cmd+Z anywhere except a text field, which keeps the browser's own
+   text undo working inside the channel editor inputs. */
+document.addEventListener("keydown", e => {
+  if (!(e.key === "z" || e.key === "Z") || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+  const t = e.target, tag = t && t.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+  e.preventDefault(); undoLayout();
+});
 document.getElementById("btnAuto").onclick = autoArrange;
 document.getElementById("btnCompact").onclick = compactGroup;
 document.getElementById("btnSortGroup").onclick = sortGroup;
@@ -4539,11 +4782,17 @@ document.getElementById("btnWriteAllGroups").onclick = async () => {
   if (prompt(`This will change radio groups ${gs.map(g=>g+1).join(", ")}. Each group will be backed up first.\n\n` +
              `Type ${token} to continue:`) !== token) return;
   let ok = 0, bad = 0;
+  const stopped = [];
   for (const g of gs){
     const r = await writeGroup(g, { confirmFirst:false });
     ok += r.ok; bad += r.bad;
+    /* A group that never got as far as writing contributes 0 written and 0
+       failed, which used to read as success in the summary line below. */
+    if (r.aborted) stopped.push(`group ${g+1} (${r.aborted})`);
   }
-  log(`all groups done — ${ok} written, ${bad} failed`, bad ? "l-err" : "l-rx");
+  log(`all groups done — ${ok} written, ${bad} failed` +
+      (stopped.length ? ` — NOT written: ${stopped.join("; ")}` : ""),
+      bad || stopped.length ? "l-err" : "l-rx");
   await readAll().catch(()=>{});
 };
 document.getElementById("btnRestoreGroup").onclick = () =>
@@ -4569,7 +4818,7 @@ let BRAVE = false;
 
   const ok = !!navigator.bluetooth && window.isSecureContext;
   authLoad();
-  loadLibrary(); loadLayout(); covLoad(); loadRadioBackups();
+  loadLibrary(); loadLayout(); initUndo(); covLoad(); loadRadioBackups();
   fillGroupSelect(); renderChips(); renderRows(); renderMap(); updateSiteSel(); renderLayout();
   showView((location.hash || "").replace("#",""));
   renderCoverage();
@@ -4606,7 +4855,7 @@ let BRAVE = false;
 })();
 
 if ("serviceWorker" in navigator && location.protocol === "https:"){
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js")
+  window.addEventListener("load", () => navigator.serviceWorker.register("/n76/sw.js")
     .then(() => log("offline app shell ready"))
     .catch(e => log("offline setup: "+e.message,"l-err")));
 }

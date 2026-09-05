@@ -1,5 +1,88 @@
 # Changelog
 
+## 2026-09-05 — the packet channel, and making it shut up
+
+Found in the field at Rolfe C. Hoyer CG near Greer, debugging why `N7WGP-9`
+had never once appeared on APRS over RF.
+
+- **Root cause was `Digital Channel`, and it is not visible from this app.**
+  The radio was set to channel 16 -- 147.500, a plain 2 m simplex slot -- so
+  every beacon went out correctly formatted onto a dead frequency. The APRS
+  page read perfectly the whole time. This is the second VR-N76 to ship this
+  way; Kristin's was on 147.580 (see 2026-08-31). Documented in the guide as
+  the first thing to check, with both observed wrong values named.
+- **Wired up the per-channel mute bit.** `RfCh.mute` has been decoded and
+  encoded since the protocol work but was hardcoded `false` in `fromLib()` and
+  absent from the UI. It now comes from a **`[MUTE]` tag in the CSV comment**,
+  following the existing `[SAT]`/`[TRAVEL]` convention, flows through
+  `build-library.mjs` as a compact `u:1`, and is editable in the channel editor
+  as **Speaker: Audible/Muted**. `144.390` ships muted.
+- **Why that matters:** the Digital Channel is monitored in the background
+  independently of A and B, and its audio goes to the speaker. Once it points
+  at 144.390 the radio chatters constantly and retuning A and B does nothing.
+  The guide now explains this, and says plainly not to fix it by turning off
+  Digital Mode -- that is the switch that generates the beacon.
+- Confirmed on air afterwards: beacons gated by two independent iGates
+  (`BWMTN` and `N7GEE-10`) via the `GREENS` and `KE7JVX-3` digipeaters, at
+  8,395 ft, path `WIDE1-1,WIDE2-1`. Also confirmed the leading unasterisked
+  `GREENS` in the path is inserted by the digipeater, not the radio -- three
+  unrelated stations show it, and neighbouring `EAGER`/`WHTMTN` do the same.
+- Codec suite still 79 passed, 0 failed.
+
+## 2026-09-03 (later) — surviving a dropped link
+
+- **A mid-operation BLE drop no longer costs the rest of the pass.** Observed
+  right after the GATT fix below: a full write pass followed immediately by a
+  full read is ~45s of uninterrupted traffic, and the radio dropped the link
+  during the last group. Web Bluetooth then failed all ten remaining slots
+  instantly, so the real error (`GATT operation failed for unknown reason`)
+  was buried under nine lines of `not connected`.
+- `connect()` is split: device selection stays there, and everything after it
+  — the connect/settle/discover retry, characteristics, event subscriptions —
+  moves to `linkUp()`. `resumeLink()` runs that again after a drop. No user
+  gesture is needed; permission for an already-chosen device survives.
+- `readAll()` now stops on a drop, reconnects **once**, re-selects the group
+  and retries the same slot. One attempt only — a radio that is genuinely gone
+  would otherwise become an unbounded reconnect loop.
+- `writeGroup()` returns instead of writing into a dead link, so a drop can no
+  longer be counted as N real write failures.
+- Both summaries say when a pass stopped early and how many groups were missed,
+  rather than reporting the partial total as if it were the whole radio.
+
+## 2026-09-03 — one GATT operation at a time
+
+- **Fixed: a bulk write could be killed mid-pass by the status poll.** Web
+  Bluetooth allows exactly one GATT operation in flight per device; a second
+  `writeValue` issued while one is pending throws *GATT operation already in
+  progress* rather than queueing. Nothing serialised them, so the 4s
+  `startLive()` status poll (1.2s with coverage logging on) was free to fire
+  in the middle of a group write. Observed 2026-09-03: group 4 wrote 31 of 31,
+  then a poll tick collided with the group 5 backup read and the run stopped
+  with 4 groups unwritten.
+- Every path that touches `radio.chWrite` — `request()`, `sendNoReply()`,
+  `registerEvent()` — now goes through a `gattOp()` queue, so operations
+  serialise instead of colliding. The chain survives a failed operation.
+- The poller also skips a tick while the queue is non-empty. The queue alone
+  makes a collision harmless, but a bulk write is hundreds of operations deep
+  and a status request joining that queue would answer long after it mattered.
+- **The write-all summary no longer reports an aborted group as fine.** A group
+  that failed its backup returned `{ok:0, bad:0}`, indistinguishable from an
+  empty one, so the run above signed off as `117 written, 0 failed` with no
+  mention of the four groups it never touched. `writeGroup` now returns an
+  `aborted` reason and the summary names those groups.
+
+## 2026-08-31 (night) — the log follows you
+
+- **Docked protocol log.** A one-line strip pinned to the bottom of every page,
+  showing the newest line coloured by kind; click it to expand a scrolling
+  200-line view, click again to collapse. Open/closed is remembered.
+- Why: the log lived only on the Protocol log page, and the page you are on
+  while something is worth watching is never that one — writing groups, testing
+  APRS receive, chasing a failed slot. You had to leave the thing you were doing
+  to see whether it worked.
+- Lines are mirrored, not moved: the Protocol log page is unchanged. The dock
+  keeps the last 400 lines; `main` gets bottom padding so nothing is covered.
+
 ## 2026-08-31 (late) — replace whole group
 
 - **A group write can now clear what it does not plan.** Until now `writeGroup`

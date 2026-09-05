@@ -39,6 +39,24 @@ total 192, so the sources agree on capacity and disagree on arrangement.
   overwritten, which confirms the write path and prompted typed destination
   confirmations plus automatic pre-write backups.
 
+## APRS: two field-confirmed gotchas (2026-09-05, Greer)
+
+- **`Digital Channel` decides where packets transmit, and nothing on the APRS
+  page reflects it.** Set at `Menu -> General Settings -> Digital Mode ->
+  Digital Channel`; the picker shows each candidate's frequency as you scroll.
+  Both of this station's VR-N76s shipped pointing at an unrelated 2 m simplex
+  slot -- 147.580 on Kristin's, 147.500 on Jason's -- so both beaconed on
+  schedule, with a valid APRS config, onto a frequency nobody monitors. The
+  radio gives no indication anything is wrong. Check this first, always.
+- **The Digital Channel is a third receiver.** It is monitored continuously in
+  the background regardless of what A and B are tuned to, and its audio goes to
+  the speaker. Retuning A and B does not silence it. The cure is the
+  **per-channel mute bit** -- `RfCh.mute`, bit 20 of the flag block, exposed on
+  the radio in its own channel editor and now in the browser programmer's
+  channel editor as **Speaker: Audible/Muted**. In the channel library it comes
+  from a `[MUTE]` tag in the CSV comment. Do not disable Digital Mode to get
+  quiet: that is the same switch that generates the beacon.
+
 ## Verified failing
 
 - Writing to any slot ≥ `channel_count` returns `INVALID_PARAMETER` per
