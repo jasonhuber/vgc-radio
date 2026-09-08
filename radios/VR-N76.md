@@ -57,6 +57,16 @@ total 192, so the sources agree on capacity and disagree on arrangement.
   from a `[MUTE]` tag in the CSV comment. Do not disable Digital Mode to get
   quiet: that is the same switch that generates the beacon.
 
+## VHF repeater work: field-confirmed (2026-09-06, Greer)
+
+Worked `146.700 − / 141.3` (K7EAR, EAARS via Greens Peak, ~8.7 mi across one
+8,875 ft ridge) from Rolfe C. Hoyer CG site 066 `34.03602, -109.45725` with no
+trouble at all, on the stock antenna. Same result on the TD-H3 alongside it.
+This is the radio doing ordinary repeater work well after a codeplug rebuild
+from n7wgp.com — worth recording because everything else in this file is about
+the programming path, not on-air performance. Path analysis and the numbers
+behind the prediction: [`../../Hoyer-Greer-Path-Analysis.md`](../../Hoyer-Greer-Path-Analysis.md).
+
 ## Verified failing
 
 - Writing to any slot ≥ `channel_count` returns `INVALID_PARAMETER` per
