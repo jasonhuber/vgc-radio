@@ -18,7 +18,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <style>
 :root{--bg:#0b1016;--panel:#121922;--line:#253241;--ink:#edf4fa;--dim:#91a0ae;
-  --blue:#66b3ff;--green:#59d18b;--amber:#f3bd58;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+  --blue:#66b3ff;--green:#59d18b;--amber:#f3bd58;--violet:#a78bfa;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:
   radial-gradient(900px 500px at 15% -5%,#18314a 0,transparent 64%),
@@ -46,6 +46,12 @@ h1{font-size:clamp(36px,6vw,68px);line-height:1.02;letter-spacing:-.05em;margin:
 .uv5r .visual svg{width:100%;max-width:150px;height:auto;filter:drop-shadow(0 16px 16px #0009)}
 .uv5r .copy{padding:28px 25px 26px 16px}
 .uv5r .model,.uv5r .go{color:var(--amber)}
+.cov{grid-column:1/-1;grid-template-columns:24% 76%;min-height:0}
+.cov .model,.cov .go{color:var(--violet)}
+.cov .features li:before{color:var(--violet)}
+.cov .visual{background:radial-gradient(circle at 50% 55%,#2a2148 0,transparent 62%);padding:24px 4px 24px}
+.cov .visual svg{width:100%;max-width:150px;height:auto}
+.cov .copy{padding:28px 25px 26px 16px}
 .uv5r .features li:before{color:var(--amber)}
 .visual img{width:100%;height:390px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 20px 18px #0009)}
 .h3 .visual img{height:350px}.copy{padding:34px 25px 28px 16px;display:flex;flex-direction:column;min-width:0}
@@ -71,13 +77,14 @@ footer a{color:var(--dim)}
 
   <section class="hero">
     <div class="eyebrow">Browser radio workshop</div>
-    <h1>One station.<br>Three very different radios.</h1>
-    <p class="lead">Choose the radio in your hand. Every tool runs locally in your browser — two over Bluetooth, one over the USB cable; <strong>channel data stays on this device unless you explicitly sync or download it.</strong></p>
+    <h1>One station.<br>Three radios, one map.</h1>
+    <p class="lead">Choose the radio in your hand, or the map to find out what is in reach. Every tool
+ runs locally in your browser — two over Bluetooth, one over the USB cable; <strong>channel data stays on this device unless you explicitly sync or download it.</strong></p>
   </section>
 
   <section class="radios" aria-label="Choose a radio">
     <a class="radio n76" href="/n76/">
-      <div class="visual"><img src="/assets/vr-n76.jpg" alt="VGC VR-N76 handheld radio"></div>
+      <div class="visual"><img src="/assets/vr-n76.png" alt="VGC VR-N76 handheld radio"></div>
       <div class="copy">
         <div class="model">VGC · Benshi protocol</div>
         <h2>VR-N76</h2>
@@ -126,6 +133,32 @@ footer a{color:var(--dim)}
         <div class="tags"><span class="tag">128 channels</span><span class="tag">USB serial</span><span class="tag">CHIRP CSV + .img</span><span class="tag">desktop only</span></div>
         <ul class="features"><li>Full 6 KiB read, CHIRP-compatible backup</li><li>Built-in N7WGP master list with slot mapping</li><li>Writes channels and names only, never calibration</li><li>Byte-for-byte readback after every write</li></ul>
         <div class="go"><span>Open UV-5R programmer</span><span>→</span></div>
+      </div>
+    </a>
+
+    <a class="radio cov" href="/coverage/">
+      <div class="visual" aria-hidden="true">
+        <svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Coverage map">
+          <path d="M6 118 L40 104 L80 122 L114 106 L114 26 L80 42 L40 24 L6 38 Z"
+                fill="#171f2e" stroke="#2f3b4d"/>
+          <path d="M40 24 L40 104 M80 42 L80 122" stroke="#2f3b4d" stroke-width="1"/>
+          <path d="M6 74 L40 62 L80 80 L114 64" fill="none" stroke="#2f3b4d" stroke-width="1"/>
+          <g stroke="#a78bfa" fill="none" opacity=".55">
+            <circle cx="62" cy="60" r="13"/><circle cx="62" cy="60" r="24"/><circle cx="62" cy="60" r="35"/>
+          </g>
+          <path d="M62 60 L62 34" stroke="#a78bfa" stroke-width="2"/>
+          <path d="M56 38 L62 30 L68 38" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="62" cy="60" r="4" fill="#a78bfa"/>
+          <circle cx="34" cy="96" r="5.5" fill="#f85149" stroke="#0b1016" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="copy">
+        <div class="model">Any radio &middot; map &middot; mobile</div>
+        <h2>Repeater reach</h2>
+        <p class="desc">Drop a pin anywhere and it names the one channel worth trying from that spot &mdash; by the number it wears on the radio in your hand, which is different on every radio.</p>
+        <div class="tags"><span class="tag">95 repeaters</span><span class="tag">per-radio channel</span><span class="tag">terrain profile</span><span class="tag">works on a phone</span></div>
+        <ul class="features"><li>Pin by GPS, tap or typed coordinates</li><li>Egli over height above average terrain</li><li>ITU-R P.526 knife-edge check on demand</li><li>Validated against the Greer field results</li></ul>
+        <div class="go"><span>Open coverage map</span><span>&rarr;</span></div>
       </div>
     </a>
   </section>
