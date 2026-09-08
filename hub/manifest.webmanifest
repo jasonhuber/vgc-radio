@@ -1,0 +1,12 @@
+{
+  "name": "N7WGP Radio Lab",
+  "short_name": "N7WGP Radios",
+  "description": "Bluetooth browser tools for the VR-N76 and TD-H3 radios.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1016",
+  "theme_color": "#0b1016",
+  "icons": [{"src":"/radio-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

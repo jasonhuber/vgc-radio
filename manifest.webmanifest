@@ -2,15 +2,15 @@
   "name": "N7WGP VGC Radio Programmer",
   "short_name": "VGC Radio",
   "description": "Program VGC/Benshi radios, configure APRS, and map receive coverage.",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "/n76/",
+  "start_url": "/n76/",
+  "scope": "/n76/",
   "display": "standalone",
   "background_color": "#0f1216",
   "theme_color": "#161b22",
   "icons": [
     {
-      "src": "/radio-icon.svg",
+      "src": "/n76/radio-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
