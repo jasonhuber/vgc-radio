@@ -15,6 +15,10 @@ ServerSignature Off
   <If "%{REQUEST_URI} =~ m#^/coverage/#">
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
   </If>
+  # /aprs/ needs the same OpenStreetMap tiles and nothing else off-origin.
+  <If "%{REQUEST_URI} =~ m#^/aprs/#">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+  </If>
 
   <FilesMatch "^(index\.html|sw\.js)$">
     Header always set Cache-Control "no-cache"

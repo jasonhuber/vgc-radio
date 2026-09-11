@@ -52,6 +52,12 @@ h1{font-size:clamp(36px,6vw,68px);line-height:1.02;letter-spacing:-.05em;margin:
 .cov .visual{background:radial-gradient(circle at 50% 55%,#2a2148 0,transparent 62%);padding:24px 4px 24px}
 .cov .visual svg{width:100%;max-width:150px;height:auto}
 .cov .copy{padding:28px 25px 26px 16px}
+.aprs{grid-column:1/-1;grid-template-columns:24% 76%;min-height:0}
+.aprs .model,.aprs .go{color:var(--green)}
+.aprs .features li:before{color:var(--green)}
+.aprs .visual{background:radial-gradient(circle at 50% 55%,#173226 0,transparent 62%);padding:24px 4px 24px}
+.aprs .visual svg{width:100%;max-width:150px;height:auto}
+.aprs .copy{padding:28px 25px 26px 16px}
 .uv5r .features li:before{color:var(--amber)}
 .visual img{width:100%;height:390px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 20px 18px #0009)}
 .h3 .visual img{height:350px}.copy{padding:34px 25px 28px 16px;display:flex;flex-direction:column;min-width:0}
@@ -159,6 +165,30 @@ footer a{color:var(--dim)}
         <div class="tags"><span class="tag">95 repeaters</span><span class="tag">per-radio channel</span><span class="tag">terrain profile</span><span class="tag">works on a phone</span></div>
         <ul class="features"><li>Pin by GPS, tap or typed coordinates</li><li>Egli over height above average terrain</li><li>ITU-R P.526 knife-edge check on demand</li><li>Validated against the Greer field results</li></ul>
         <div class="go"><span>Open coverage map</span><span>&rarr;</span></div>
+      </div>
+    </a>
+    <a class="radio aprs" href="/aprs/">
+      <div class="visual" aria-hidden="true">
+        <svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="APRS track">
+          <path d="M6 118 L40 104 L80 122 L114 106 L114 26 L80 42 L40 24 L6 38 Z"
+                fill="#171f2e" stroke="#2f3b4d"/>
+          <path d="M40 24 L40 104 M80 42 L80 122" stroke="#2f3b4d" stroke-width="1"/>
+          <path d="M22 96 C40 70, 52 84, 60 62 S 84 40, 98 44" fill="none" stroke="#59d18b" stroke-width="2" stroke-linecap="round"/>
+          <g fill="#59d18b" stroke="#0b1016" stroke-width="1.2">
+            <circle cx="22" cy="96" r="3.5"/><circle cx="41" cy="76" r="3.5"/><circle cx="60" cy="62" r="3.5"/><circle cx="78" cy="48" r="3.5"/>
+          </g>
+          <circle cx="98" cy="44" r="5.5" fill="#f3bd58" stroke="#0b1016" stroke-width="1.5"/>
+          <path d="M98 44 L98 28" stroke="#a78bfa" stroke-width="2"/>
+          <path d="M92 32 L98 24 L104 32" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="copy">
+        <div class="model">N7WGP-9 &middot; KK7YKZ-7 &middot; map &middot; mobile</div>
+        <h2>APRS track</h2>
+        <p class="desc">Every beacon the radios have been heard sending, colored by the digipeater that heard it first. aprs.fi throws raw packets away after two days &mdash; this page keeps them, and shows the silences where nobody was listening.</p>
+        <div class="tags"><span class="tag">raw APRS-IS</span><span class="tag">who heard what</span><span class="tag">battery + altitude</span><span class="tag">paste to add</span></div>
+        <ul class="features"><li>Track and packets colored by first hop, iGate or voltage</li><li>Silences longer than the beacon interval, with where you were</li><li>RF versus phone-app packets told apart by q-construct</li><li>Paste new packets from aprs.fi, copy them back to the archive</li></ul>
+        <div class="go"><span>Open APRS track</span><span>&rarr;</span></div>
       </div>
     </a>
   </section>
