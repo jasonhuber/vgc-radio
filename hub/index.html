@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>N7WGP Radio Lab</title>
-<meta name="description" content="Browser-based Bluetooth programming tools for the VGC VR-N76 and TIDRADIO TD-H3 at N7WGP.">
+<meta name="description" content="Browser-based Bluetooth programming tools for the VGC VR-N76, TIDRADIO TD-H3 and TD-H9 at N7WGP.">
 <meta name="theme-color" content="#0b1016">
 <meta property="og:title" content="N7WGP Radio Lab">
 <meta property="og:description" content="Choose a radio and program it directly from a Chromium browser over Bluetooth.">
@@ -58,6 +58,12 @@ h1{font-size:clamp(36px,6vw,68px);line-height:1.02;letter-spacing:-.05em;margin:
 .aprs .visual{background:radial-gradient(circle at 50% 55%,#173226 0,transparent 62%);padding:24px 4px 24px}
 .aprs .visual svg{width:100%;max-width:150px;height:auto}
 .aprs .copy{padding:28px 25px 26px 16px}
+.h9{grid-column:1/-1;grid-template-columns:24% 76%;min-height:0}
+.h9 .model,.h9 .go{color:var(--amber)}
+.h9 .features li:before{color:var(--amber)}
+.h9 .visual{background:radial-gradient(circle at 50% 55%,#4a2c12 0,transparent 62%);padding:24px 4px 18px}
+.h9 .visual img{height:320px;max-width:200px}
+.h9 .copy{padding:28px 25px 26px 16px}
 .uv5r .features li:before{color:var(--amber)}
 .visual img{width:100%;height:390px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 20px 18px #0009)}
 .h3 .visual img{height:350px}.copy{padding:34px 25px 28px 16px;display:flex;flex-direction:column;min-width:0}
@@ -83,9 +89,9 @@ footer a{color:var(--dim)}
 
   <section class="hero">
     <div class="eyebrow">Browser radio workshop</div>
-    <h1>One station.<br>Three radios, one map.</h1>
+    <h1>One station.<br>Four radios, one map.</h1>
     <p class="lead">Choose the radio in your hand, or the map to find out what is in reach. Every tool
- runs locally in your browser — two over Bluetooth, one over the USB cable; <strong>channel data stays on this device unless you explicitly sync or download it.</strong></p>
+ runs locally in your browser — three over Bluetooth, one over the USB cable; <strong>channel data stays on this device unless you explicitly sync or download it.</strong></p>
   </section>
 
   <section class="radios" aria-label="Choose a radio">
@@ -110,6 +116,18 @@ footer a{color:var(--dim)}
         <div class="tags"><span class="tag">199 channels</span><span class="tag">BLE</span><span class="tag">CHIRP CSV</span></div>
         <ul class="features"><li>Read channels and radio settings</li><li>Load built-in, saved or imported plans</li><li>Search, compare and review every change</li><li>Automatic backup before every write</li></ul>
         <div class="go"><span>Open H3 programmer</span><span>→</span></div>
+      </div>
+    </a>
+
+    <a class="radio h9" href="/tidradioh9/">
+      <div class="visual"><img src="/assets/td-h9.png" alt="TIDRADIO TD-H9 handheld radio, orange, APRS screen"></div>
+      <div class="copy">
+        <div class="model">TIDRADIO &middot; 10 W &middot; GPS / APRS &middot; two on order</div>
+        <h2>TD-H9</h2>
+        <p class="desc">The APRS tracker pair: the same H3 wire protocol with a bigger codeplug, three power levels and an unmapped GPS/APRS settings region. Reads discover how much memory the radio really has; the diff lab shows which bytes move when a setting changes on the keypad.</p>
+        <div class="tags"><span class="tag">199 channels</span><span class="tag">BLE</span><span class="tag">10 W / 5 W / 1 W</span><span class="tag">GPS</span><span class="tag">APRS</span><span class="tag">pre-arrival build</span></div>
+        <ul class="features"><li>Identity check for the TDH9 and H3-family answers, extent discovery on read</li><li>Two candidate channel layouts scored against the dump before any write is allowed</li><li>Station plan, CHIRP CSV and image import, guarded changed-block writes with readback</li><li>Settings diff lab for mapping the APRS region byte by byte</li></ul>
+        <div class="go"><span>Open H9 programmer</span><span>&rarr;</span></div>
       </div>
     </a>
 
@@ -195,11 +213,11 @@ footer a{color:var(--dim)}
 
   <section class="notes">
     <div><b>Browser requirement</b>Chrome, Edge or Brave. The Bluetooth tools also run on Android; the UV-5R tool is desktop only.</div>
-    <div><b>Write safety</b>Both tools read first, preserve backups and require an explicit destination confirmation.</div>
+    <div><b>Write safety</b>Every programmer reads first, preserves a backup and requires an explicit destination confirmation. The H9 tool also refuses to write until its channel layout has been checked against the radio's own screen.</div>
     <div><b>Radio link</b>Disconnect the vendor phone app first. Each radio accepts one controller at a time — close CHIRP before using the UV-5R tool.</div>
   </section>
 
-  <footer><span>Built for N7WGP · amateur-radio operation only</span><span>Radio images: <a href="https://www.passion-radio.com/vhf-uhf/vgc-n76-3028.html">Passion Radio</a> · <a href="https://signalstuff.com/radio-models/tidradio-td-h3/">Signal Stuff</a></span></footer>
+  <footer><span>Built for N7WGP · amateur-radio operation only</span><span>Radio images: <a href="https://www.passion-radio.com/vhf-uhf/vgc-n76-3028.html">Passion Radio</a> · <a href="https://signalstuff.com/radio-models/tidradio-td-h3/">Signal Stuff</a> · <a href="https://tidradio.com/products/td-h9-10w-bluetooth-aprs-radio-handheld">TIDRADIO</a></span></footer>
 </main>
 <script>
 if ("serviceWorker" in navigator) window.addEventListener("load", () =>

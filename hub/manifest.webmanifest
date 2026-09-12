@@ -1,7 +1,7 @@
 {
   "name": "N7WGP Radio Lab",
   "short_name": "N7WGP Radios",
-  "description": "Bluetooth browser tools for the VR-N76 and TD-H3 radios.",
+  "description": "Bluetooth browser tools for the VR-N76, TD-H3 and TD-H9 radios.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
