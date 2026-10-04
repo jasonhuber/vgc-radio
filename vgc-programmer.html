@@ -614,6 +614,41 @@ footer{padding:6px 18px 26px;text-align:center;font-size:12px;color:var(--muted)
     </div>
     <div class="row" style="margin:-4px 0 10px"><span id="syncState"></span></div>
 
+    <details class="privacyBox" id="sweepBox">
+      <summary style="cursor:pointer;font-weight:650">Sweep every frequency (find what you can hit from here)</summary>
+      <p class="note">The radio's own scan only visits programmed channels. A sweep instead
+      <b>retunes the channel the radio is sitting on</b> across a whole band, one step at a time, and
+      logs anything that opens squelch — with GPS — into the current session. The channel is
+      restored when the sweep ends. TX is disabled on it during the sweep. Park the radio on a
+      channel you can spare (it is rewritten many times) and keep squelch at a level that
+      doesn't open on noise.</p>
+      <div class="row">
+        <label class="row" style="gap:5px">band
+          <select id="swBand">
+            <option value="144,148">2 m ham 144–148</option>
+            <option value="420,450">70 cm ham 420–450</option>
+            <option value="136,174">All VHF 136–174</option>
+            <option value="400,480">All UHF 400–480</option>
+            <option value="136,174;400,480">Everything, VHF + UHF</option>
+            <option value="151.82,154.6">MURS / business 151.8–154.6</option>
+            <option value="462.5,467.75">GMRS / FRS 462.5–467.75</option>
+            <option value="156,162.6">Marine + NOAA 156–162.6</option>
+            <option value="custom">Custom…</option>
+          </select></label>
+        <label class="row" style="gap:5px">from <input id="swFrom" type="number" step="0.0125" style="width:90px"> MHz</label>
+        <label class="row" style="gap:5px">to <input id="swTo" type="number" step="0.0125" style="width:90px"> MHz</label>
+        <label class="row" style="gap:5px">step
+          <select id="swStep"><option value="12.5">12.5 kHz</option><option value="25">25 kHz</option>
+            <option value="5">5 kHz</option><option value="6.25">6.25 kHz</option></select></label>
+        <label class="row" style="gap:5px">dwell <input id="swDwell" type="number" min="100" max="2000" value="300" style="width:62px"> ms</label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnSweep" class="primary">Start sweep</button>
+        <button id="btnSweepStop" disabled>Stop sweep</button>
+        <span id="swState" class="dim"></span>
+      </div>
+    </details>
+
     <div class="row" style="margin:0 0 12px;padding:9px 11px;border:1px solid var(--line);
       border-radius:8px;background:var(--sunk)">
       <label class="row" style="gap:6px;font-size:12px;color:var(--muted)">Showing
@@ -3170,11 +3205,13 @@ function covSample(s){
   const openNow = !!(s.sq_open || s.in_rx);
   const g = s.region != null ? s.region : 0;
   const ch = s.channel != null ? s.channel : 0;
-  if (cov.open && (!openNow || cov.open.g !== g || cov.open.ch !== ch)) covCloseOpen();
+  const sf = cov.sweep && cov.sweep.on ? cov.sweep.freq : null;
+  if (cov.open && (!openNow || cov.open.g !== g || cov.open.ch !== ch || (cov.open.sweep||null) !== sf))
+    covCloseOpen();
   if (openNow){
     if (!cov.open){
-      const info = covChannelInfo(g, ch);
-      cov.open = { t0:Date.now(), g, ch, name:info.name, rx:info.rx,
+      const info = sf != null ? { name:"SWEEP", rx:sf } : covChannelInfo(g, ch);
+      cov.open = { t0:Date.now(), g, ch, name:info.name, rx:info.rx, sweep:sf,
                    scanning:!!s.scanning, rssiMax:0, rssiSum:0, n:0, fix:cov.fix };
     }
     const o = cov.open;
@@ -3192,7 +3229,7 @@ function covCloseOpen(){
   const pos = covSafeFix(o.fix);
   covPush({
     kind:"rx", t:new Date(o.t0).toISOString(), secs:+secs.toFixed(1),
-    g:o.g, ch:o.ch, name:o.name, rx:o.rx, scanning:o.scanning,
+    g:o.g, ch:o.ch, name:o.name, rx:o.rx, scanning:o.scanning, sweep:o.sweep != null,
     rssi:o.n ? Math.round(o.rssiMax) : null,
     rssiAvg:o.n ? Math.round(o.rssiSum/o.n) : null, n:o.n,
     lat:pos.lat, lon:pos.lon, acc:pos.acc, private:pos.private
@@ -3302,8 +3339,86 @@ async function covStart(){
   renderCoverage();
 }
 
+/* ---------- sweep: retune the parked channel across a band ----------
+   The radio has no start-scan command, so the app does the scanning: it
+   rewrites the channel the radio is parked on (TX disabled), waits a dwell,
+   reads status, and lets covSample log anything that opens squelch tagged
+   with the swept frequency. The original channel is restored afterwards. */
+const swEl = id => document.getElementById(id);
+function swRanges(){
+  const v = swEl("swBand").value;
+  if (v === "custom") return [[parseFloat(swEl("swFrom").value), parseFloat(swEl("swTo").value)]];
+  return v.split(";").map(p => p.split(",").map(Number));
+}
+function swSyncInputs(){
+  const v = swEl("swBand").value, custom = v === "custom";
+  swEl("swFrom").disabled = swEl("swTo").disabled = !custom;
+  if (!custom){ const r = swRanges(); swEl("swFrom").value = r[0][0]; swEl("swTo").value = r[r.length-1][1]; }
+}
+function swState(t){ swEl("swState").textContent = t || ""; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function sweepStart(){
+  if (cov.sweep && cov.sweep.on) return;
+  if (!radio.connected){ log("connect the radio first", "l-err"); return; }
+  const step = parseFloat(swEl("swStep").value)/1000;
+  const dwell = Math.max(100, parseInt(swEl("swDwell").value,10) || 300);
+  const freqs = [];
+  for (const [a,b] of swRanges()){
+    if (!(a > 0 && b >= a)){ log("sweep range is not valid", "l-err"); return; }
+    for (let i = 0; a + i*step <= b + 1e-9; i++) freqs.push(Math.round((a + i*step)*1e5)/1e5);
+  }
+  if (!freqs.length) return;
+  if (!cov.on) await covStart();
+  if (!cov.on) return;
+  let st;
+  try { st = await getHtStatus(); } catch(e){ log("sweep: no status — "+e.message, "l-err"); return; }
+  const mins = Math.round(freqs.length*(dwell+250)/60000);
+  if (!confirm(`Sweep ${freqs.length} frequencies (about ${mins} min)?\n\nThis rewrites group ${st.region+1} ` +
+      `channel ${st.channel+1} — the one the radio is on now — over and over, then puts it back.`)) return;
+  let orig;
+  try { orig = await readChannel(st.channel); }
+  catch(e){ log("sweep: could not read the parked channel — "+e.message, "l-err"); return; }
+  const sw = cov.sweep = { on:true, freq:null, orig, ch:st.channel, i:0, total:freqs.length, hits:0 };
+  swEl("btnSweep").disabled = true; swEl("btnSweepStop").disabled = false;
+  log(`sweep started: ${freqs.length} steps on group ${st.region+1} ch ${st.channel+1}`, "l-rx");
+  let fails = 0;
+  try {
+    for (let i = 0; i < freqs.length && sw.on && cov.on && radio.connected; i++){
+      const f = freqs[i]; sw.i = i;
+      try {
+        await writeChannel(Object.assign({}, orig, {
+          rx_freq:f, tx_freq:f, rx_mod:0, tx_mod:0, rx_sub_audio:null, tx_sub_audio:null,
+          tx_disable:true, mute:false, scan:false, fixed_freq:false, name:"SWEEP" }));
+        sw.freq = f;
+        await sleep(dwell);
+        let s = await getHtStatus();
+        if (s.sq_open || s.in_rx){            // something is there — look a little longer
+          sw.hits++;
+          for (let k = 0; k < 3 && sw.on; k++){ await sleep(350); s = await getHtStatus(); }
+        }
+        fails = 0;
+      } catch(e){
+        if (++fails >= 4){ log("sweep stopped, radio keeps failing: "+e.message, "l-err"); break; }
+      }
+      swState(`${f.toFixed(4)} MHz · ${i+1}/${freqs.length} · ${sw.hits} signal(s)`);
+    }
+  } finally {
+    sw.on = false; sw.freq = null;
+    covCloseOpen();
+    try { await writeChannel(orig); log("sweep ended — channel restored", "l-rx"); }
+    catch(e){ log("sweep ended but the channel could NOT be restored — re-read and fix group " +
+                  `${st.region+1} ch ${st.channel+1}: ${e.message}`, "l-err"); }
+    swEl("btnSweep").disabled = false; swEl("btnSweepStop").disabled = true;
+    swState(`done — ${sw.hits} signal(s) logged to this session`);
+    cov.sweep = null;
+  }
+}
+function sweepStop(){ if (cov.sweep) cov.sweep.on = false; }
+
 function covStop(){
   if (!cov.on) return;
+  sweepStop();
   covCloseOpen();
   const sess = covSessionById(cov.sid);
   if (sess){ sess.t1 = Date.now(); sess.updated = sess.t1; }
@@ -3553,7 +3668,7 @@ function renderCoverage(){
   /* by channel */
   const by = new Map();
   rows.forEach(r => {
-    const k = r.g+":"+r.ch;
+    const k = r.sweep && r.rx != null ? "s:"+r.rx : r.g+":"+r.ch;
     let e = by.get(k);
     if (!e){ e = { g:r.g, ch:r.ch, name:r.name, rx:r.rx, hits:0, best:null, secs:0, last:r.t, mi:null }; by.set(k, e); }
     e.hits++; e.secs += r.secs||0;
@@ -4525,6 +4640,9 @@ document.getElementById("btnCheckClose").onclick = () =>
 /* ---------- coverage log ---------- */
 document.getElementById("btnCovStart").onclick = () => covStart();
 document.getElementById("btnCovStop").onclick  = () => covStop();
+swEl("swBand").onchange = swSyncInputs; swSyncInputs();
+swEl("btnSweep").onclick = () => sweepStart();
+swEl("btnSweepStop").onclick = sweepStop;
 document.getElementById("btnCovCsv").onclick   = covCsv;
 document.getElementById("btnCovGeo").onclick   = covGeoJson;
 document.getElementById("chkCovSites").onchange = () => renderCovMap();
